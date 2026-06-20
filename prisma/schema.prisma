@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for Wealth Journal expense tracker
+// learn more: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +10,66 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// A user of the Wealth Journal (simplified single-user mode for this demo;
+/// Supabase Auth would normally own this table, but we keep a local User so
+/// Row-Level-Security semantics can be modelled via user_id scoping).
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  months Month[]
 }
 
-model Post {
+/// A monthly ledger. `monthId` is the "YYYY-MM" key (e.g. "2026-06").
+model Month {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  userId    String
+  monthId   String
+  income    Float    @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emis      Emi[]
+  expenses  Expense[]
+
+  @@unique([userId, monthId])
+  @@index([userId])
+}
+
+/// Recurring obligations / EMIs tied to a month.
+model Emi {
+  id        String   @id @default(cuid())
+  monthId   String
+  name      String
+  amount    Float
+  dueDate   Int      // day of month (1-31)
+  isPaid    Boolean  @default(false)
+  category  String   @default("Other")
+  icon      String   @default("Globe")
+  createdAt DateTime @default(now())
+
+  month     Month    @relation(fields: [monthId], references: [id], onDelete: Cascade)
+
+  @@index([monthId])
+}
+
+/// Individual expense entries tied to a month.
+model Expense {
+  id          String   @id @default(cuid())
+  monthId     String
+  amount      Float
+  category    String
+  description String?
+  name        String?
+  date        String   // ISO date string "YYYY-MM-DD"
+  createdAt   DateTime @default(now())
+
+  month       Month    @relation(fields: [monthId], references: [id], onDelete: Cascade)
+
+  @@index([monthId])
+  @@index([category])
 }

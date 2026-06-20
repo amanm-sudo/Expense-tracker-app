@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Design System Colors */
+    --cream: #F6F5F0;
+    --sage-dark: #2D3B2D;
+    --sage-muted: #5C6B5C;
+    --terracotta: #A0522D;
+    --rust-dark: #8B4513;
+    --gray-border: #D5D0C8;
+    --gray-bg: #EBE8E2;
+    --white: #FFFFFF;
+    --white-warm: #FAFAF7;
+    --text-primary: #1A1A1A;
+    --text-secondary: #6B6560;
+    --text-muted: #9B9590;
+    --paid-green: #4A7C59;
+    --paid-green-bg: #E8F0E9;
+    --pending-amber: #C4953A;
+    --pending-amber-bg: #FDF3E0;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-xl: 0 12px 40px rgba(0,0,0,0.12);
+
+    /* Fonts */
+    --font-serif: 'DM Serif Display', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-quote: 'Cormorant Garamond', Georgia, serif;
+
+    /* shadcn overrides */
+    --background: 48 14% 95%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 120 14% 20%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 37 13% 90%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 37 13% 90%;
+    --muted-foreground: 30 5% 50%;
+    --accent: 37 13% 90%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 33 12% 81%;
+    --input: 33 12% 81%;
+    --ring: 120 14% 20%;
+    --radius: 0.25rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 120 14% 20%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 37 13% 90%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 33 12% 81%;
+    --sidebar-ring: 120 14% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--cream);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Utility classes for the design system */
+@layer utilities {
+  .font-serif-display {
+    font-family: var(--font-serif);
+  }
+
+  .font-quote {
+    font-family: var(--font-quote);
+  }
+
+  .bg-cream {
+    background-color: var(--cream);
+  }
+
+  .bg-sage-dark {
+    background-color: var(--sage-dark);
+  }
+
+  .bg-gray-custom {
+    background-color: var(--gray-bg);
+  }
+
+  .text-sage-dark {
+    color: var(--sage-dark);
+  }
+
+  .text-terracotta {
+    color: var(--terracotta);
+  }
+
+  .text-rust-dark {
+    color: var(--rust-dark);
+  }
+
+  .text-muted-custom {
+    color: var(--text-muted);
+  }
+
+  .text-secondary-custom {
+    color: var(--text-secondary);
+  }
+
+  .border-gray-custom {
+    border-color: var(--gray-border);
+  }
+
+  .shadow-card-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-card-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-card-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Shimmer animation for loading */
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, #EBE8E2 25%, #F0EDE7 50%, #EBE8E2 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Pulse for pending badges */
+  @keyframes gentle-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .animate-gentle-pulse {
+    animation: gentle-pulse 2s ease-in-out infinite;
+  }
+}
