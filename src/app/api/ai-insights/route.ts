@@ -19,9 +19,9 @@ const SYSTEM_PROMPT =
   "You are a thoughtful financial advisor writing a personal note for the user's wealth journal. You will receive aggregated monthly spending data (no individual transaction details). Respond with valid JSON only, no markdown. The JSON must have this exact shape: { \"note\": { \"greeting\": string, \"bodyParagraphs\": string[3], \"closing\": string, \"signature\": string }, \"suggestions\": string[3-4] }. The note should be warm, personal, and reference the data. Each suggestion should be a specific, actionable optimization tip. Sign as 'Your Wealth Journal'.";
 
 /** Build a graceful fallback note when AI is unavailable. */
-function buildFallbackNote(monthLabel: string, totalSpend: number): AiInsightsResponse {
+function buildFallbackNote(monthLabel: string, totalSpend: number, userName?: string | null): AiInsightsResponse {
   const note: AIPersonalNote = {
-    greeting: "Dear Alex,",
+    greeting: `Dear ${userName || 'Friend'},`,
     bodyParagraphs: [
       `As I reviewed your journal for ${monthLabel}, I noticed your recorded spending totalled $${totalSpend.toFixed(
         2,
@@ -103,7 +103,7 @@ function parseAiResponse(raw: string): AiInsightsResponse | null {
 // ─── POST /api/ai-insights ────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const { id: userId } = await getAuthenticatedUser();
+    const { id: userId, name: userName } = await getAuthenticatedUser();
     const body = (await req.json()) as AiInsightsRequest;
     const { monthId } = body;
 
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
 
     if (!aiResult) {
       return NextResponse.json(
-        buildFallbackNote(monthLabel, currentTotal),
+        buildFallbackNote(monthLabel, currentTotal, userName),
         { status: 200 },
       );
     }

@@ -32,7 +32,7 @@ export async function GET(
   { params }: { params: Promise<{ monthId: string }> },
 ) {
   try {
-    const { id: userId } = await getAuthenticatedUser();
+    const { id: userId, name: userName } = await getAuthenticatedUser();
     const { monthId } = await params;
 
     if (!isValidMonthId(monthId)) {
@@ -177,7 +177,7 @@ export async function GET(
     // ── aiPersonalNote (default, NOT calling the AI endpoint) ────────
     const monthLabel = formatMonthLabel(monthId);
     const aiPersonalNote: AIPersonalNote = {
-      greeting: "Dear Alex,",
+      greeting: `Dear ${userName || 'Friend'},`,
       bodyParagraphs: [
         `As I reviewed your journal for ${monthLabel}, I noticed your spending gravitated most toward ${
           topCategoryName || "essentials"

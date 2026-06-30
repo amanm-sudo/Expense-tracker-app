@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { Coffee, Home, ShoppingBag, Receipt, Plus } from 'lucide-react';
+import { Coffee, Home, ShoppingBag, Receipt, Plus, Trash2 } from 'lucide-react';
 import TopBar from '@/components/layout/TopBar';
 import { format } from 'date-fns';
 
@@ -13,7 +13,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function DashboardPage() {
-  const { dashboard, openAddExpense, addToast } = useStore();
+  const { dashboard, openAddExpense, addToast, deleteExpense } = useStore();
 
   return (
     <div className="min-h-full flex flex-col">
@@ -108,7 +108,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={expense.id}
-                    className={`flex items-center gap-4 px-4 md:px-6 py-4 transition-colors hover:bg-black/[0.02]
+                    className={`group flex items-center gap-4 px-4 md:px-6 py-4 transition-colors hover:bg-black/[0.02]
                       ${index < dashboard.recentExpenses.length - 1 ? 'border-b border-gray-border' : ''}
                     `}
                     style={{ animationDelay: `${index * 60}ms` }}
@@ -127,6 +127,13 @@ export default function DashboardPage() {
                     <div className="text-base font-semibold text-text-primary tabular-nums">
                       ₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
+                    <button
+                      onClick={() => deleteExpense(expense.id)}
+                      title="Remove entry"
+                      className="ml-2 p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 text-text-muted transition-all duration-150 flex-shrink-0"
+                    >
+                      <Trash2 size={15} strokeWidth={1.8} />
+                    </button>
                   </div>
                 );
               })

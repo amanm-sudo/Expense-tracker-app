@@ -214,7 +214,7 @@ const demoSummary: SummaryData = {
     },
   ],
   aiPersonalNote: {
-    greeting: 'Dear Alex,',
+    greeting: 'Dear Friend,',
     bodyParagraphs: [
       "As I reviewed your journal for January, I couldn't help but notice how beautifully you've balanced your priorities. You managed to keep your leisure spending remarkably disciplined—nearly 15% lower than your seasonal average.",
       'While the increase in dining out suggests a month filled with social connection, your consistent contribution to your savings narrative remains the highlight. You are writing a story of true stability.',
@@ -252,6 +252,7 @@ interface AppState {
   // Dashboard data
   dashboard: DashboardData;
   addExpense: (expense: Expense) => void;
+  deleteExpense: (expenseId: string) => Promise<void>;
 
   // Analytics data
   analytics: AnalyticsData;
@@ -338,6 +339,28 @@ export const useStore = create<AppState>((set, get) => ({
         recentExpenses: [expense, ...state.dashboard.recentExpenses].slice(0, 10),
       },
     })),
+
+  deleteExpense: async (expenseId) => {
+    try {
+      const response = await fetch(`/api/expenses/${expenseId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete');
+      set((state) => {
+        const deleted = state.dashboard.recentExpenses.find((e) => e.id === expenseId);
+        const amount = deleted?.amount ?? 0;
+        return {
+          dashboard: {
+            ...state.dashboard,
+            recentExpenses: state.dashboard.recentExpenses.filter((e) => e.id !== expenseId),
+            expensesTracked: Math.max(0, state.dashboard.expensesTracked - amount),
+            remainingBalance: state.dashboard.remainingBalance + amount,
+          },
+        };
+      });
+      get().addToast('Entry removed', 'success');
+    } catch {
+      get().addToast('Failed to remove entry', 'error');
+    }
+  },
 
   // Loading
   loading: {},
