@@ -17,7 +17,7 @@ const timeGroupLabels: Record<string, string> = {
 };
 
 export default function RecurringPage() {
-  const { recurring } = useStore();
+  const { recurring, addToast } = useStore();
 
   // Group obligations by timeGroup
   const grouped = recurring.obligations.reduce((acc, item) => {
@@ -52,7 +52,7 @@ export default function RecurringPage() {
                 Monthly Total
               </div>
               <div className="font-serif-display text-xl text-text-primary">
-                ${recurring.monthlyTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₹{recurring.monthlyTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function RecurringPage() {
                           </div>
                         </div>
                         <div className="text-base font-semibold text-text-primary tabular-nums flex-shrink-0 mr-4">
-                          ${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="flex-shrink-0">
                           {item.status === 'paid' ? (
@@ -129,7 +129,10 @@ export default function RecurringPage() {
             <div className="bg-white border border-gray-border rounded shadow-card-sm p-8 text-center">
               <Globe size={48} className="mx-auto text-text-muted mb-3" />
               <p className="text-text-secondary text-sm mb-2">No recurring payments set up</p>
-              <button className="mt-3 px-4 py-2 bg-sage-dark text-white text-sm font-medium rounded hover:bg-[#333F33] transition-colors">
+              <button
+                onClick={() => addToast('Adding recurring payments coming soon', 'info')}
+                className="mt-3 px-4 py-2 bg-sage-dark text-white text-sm font-medium rounded hover:bg-[#333F33] transition-colors"
+              >
                 Add Recurring Payment
               </button>
             </div>
@@ -150,7 +153,10 @@ export default function RecurringPage() {
               <span className="font-medium text-text-primary">{recurring.upcomingDraft.dueDay}th</span>.
               {' '}Ensure your Primary Account ending in *{recurring.upcomingDraft.accountEnding} is sufficiently funded.
             </p>
-            <button className="text-[13px] font-medium text-text-primary underline hover:text-sage-dark transition-colors">
+            <button
+              onClick={() => addToast('Funding sources management coming soon', 'info')}
+              className="text-[13px] font-medium text-text-primary underline hover:text-sage-dark transition-colors"
+            >
               Manage Funding Sources
             </button>
           </div>
@@ -161,7 +167,7 @@ export default function RecurringPage() {
               Quarterly Outlook
             </h3>
             <p className="text-[13px] text-white/70 leading-relaxed mb-5">
-              Projected spending on subscriptions for Q1 2024 is trending{' '}
+              Projected spending on subscriptions is trending{' '}
               {recurring.quarterlyOutlook.projectedTrend}.
             </p>
             <div className="flex items-center justify-between mb-2">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   getAuthenticatedUser,
+  AuthError,
   isValidMonthId,
   toExpense,
 } from "@/lib/auth";
@@ -110,6 +111,9 @@ export async function GET(
     };
     return NextResponse.json(body);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[months.GET] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to load month data." },
@@ -151,6 +155,9 @@ export async function PATCH(
 
     return NextResponse.json({ monthId, income: updated.income });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[months.PATCH] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to update income." },
@@ -223,6 +230,9 @@ export async function POST(
 
     return NextResponse.json(toRecurringObligation(created), { status: 201 });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[months.POST] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to add recurring obligation." },

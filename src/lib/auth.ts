@@ -1,31 +1,41 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { db } from "@/lib/db";
 import type { Expense, ExpenseCategory } from "@/types";
 
 /**
- * Simplified auth helper.
- *
- * In a production Supabase deployment this would resolve the authenticated
- * user from the Supabase session and enforce Row-Level-Security. For this
- * single-user personal tracker demo we resolve a stable demo user (created
- * on first access) so every API route can scope data by `userId`.
+ * Returns the authenticated user from the NextAuth session.
+ * Throws a 401-style error if no session is found.
+ * All API routes call this first to scope data by userId.
  */
-const DEMO_USER_ID = process.env.DEMO_USER_ID || "demo-user-wealth-journal";
-const DEMO_EMAIL = "journal@wealth.local";
-const DEMO_NAME = "Alex";
-
-/** Returns the active user's id, creating the demo user if needed. */
 export async function getAuthenticatedUser(): Promise<{
   id: string;
   email: string;
   name: string | null;
 }> {
-  let user = await db.user.findUnique({ where: { id: DEMO_USER_ID } });
-  if (!user) {
-    user = await db.user.create({
-      data: { id: DEMO_USER_ID, email: DEMO_EMAIL, name: DEMO_NAME },
-    });
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
+    throw new AuthError("Not authenticated", 401);
   }
+
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) {
+    throw new AuthError("User not found", 404);
+  }
+
   return { id: user.id, email: user.email, name: user.name };
+}
+
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string, status = 401) {
+    super(message);
+    this.status = status;
+  }
 }
 
 /** Map an ExpenseCategory to a lucide icon name used by the frontend. */

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getAuthenticatedUser, isValidMonthId } from "@/lib/auth";
+import { getAuthenticatedUser, AuthError, isValidMonthId } from "@/lib/auth";
 import type {
   RecurringData,
   RecurringObligation,
@@ -146,6 +146,9 @@ export async function GET(
 
     return NextResponse.json(body);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[recurring.GET] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to load recurring data." },

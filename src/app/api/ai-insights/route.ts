@@ -3,6 +3,7 @@ import ZAI from "z-ai-web-dev-sdk";
 import { db } from "@/lib/db";
 import {
   getAuthenticatedUser,
+  AuthError,
   isValidMonthId,
   getPreviousMonthId,
   formatMonthLabel,
@@ -213,6 +214,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(aiResult);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[ai-insights.POST] error:", err);
     // Graceful fallback rather than a hard 500 — AI is a nice-to-have.
     try {

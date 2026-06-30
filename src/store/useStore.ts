@@ -232,6 +232,12 @@ interface AppState {
   currentPage: PageView;
   setCurrentPage: (page: PageView) => void;
 
+  // User profile (seeded from NextAuth session)
+  userName: string;
+  userEmail: string;
+  setUserProfile: (name: string, email: string) => void;
+  updateUserName: (name: string) => Promise<void>;
+
   // Date selection (stored as label "Month Year")
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
@@ -286,6 +292,25 @@ export const useStore = create<AppState>((set, get) => ({
   // Navigation
   currentPage: 'dashboard',
   setCurrentPage: (page) => set({ currentPage: page }),
+
+  // User profile
+  userName: '',
+  userEmail: '',
+  setUserProfile: (name, email) => set({ userName: name, userEmail: email }),
+  updateUserName: async (name) => {
+    try {
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error('Failed to update name');
+      set({ userName: name });
+      get().addToast(`Name updated to "${name}"`, 'success');
+    } catch {
+      get().addToast('Failed to update name', 'error');
+    }
+  },
 
   // Date — default to current month label
   selectedMonth: currentMonthLabel(),

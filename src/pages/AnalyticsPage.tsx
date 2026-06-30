@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   return (
     <div className="bg-sage-dark text-white text-xs py-2 px-3 rounded shadow-card-md">
       <div className="font-medium">{format(parseISO(label || ''), 'MMM dd')}</div>
-      <div className="tabular-nums">${payload[0].value.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+      <div className="tabular-nums">₹{payload[0].value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
     </div>
   );
 };
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
           {/* Quote Card */}
           <div className="bg-white border border-gray-border rounded shadow-card-sm p-5 flex items-center justify-center animate-slide-up" style={{ animationDelay: '180ms' }}>
             <p className="font-quote text-[15px] italic text-text-secondary text-center leading-relaxed">
-              "A budget is telling your money where to go instead of wondering where it went."
+              &quot;A budget is telling your money where to go instead of wondering where it went.&quot;
             </p>
           </div>
         </div>
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
               Spending Trend
             </h3>
             <p className="text-text-secondary text-[13px] mb-5">
-              Daily velocity of personal capital throughout January.
+              Daily velocity of personal capital throughout the month.
             </p>
             <div className="h-[220px] md:h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
                     tick={{ fontSize: 11, fill: '#9B9590' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#D5D0C8', strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <Line
@@ -132,11 +132,11 @@ export default function AnalyticsPage() {
               Current Total
             </div>
             <div className="font-serif-display text-2xl md:text-[28px] text-white mb-3">
-              ${analytics.currentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{analytics.currentTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center gap-1.5 text-white/70 text-[13px]">
               <TrendingUp size={14} />
-              <span>{analytics.percentChangeFromLastMonth}% increase from Dec</span>
+              <span>{analytics.percentChangeFromLastMonth}% from last month</span>
             </div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function AnalyticsPage() {
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium text-text-primary">{cat.name}</span>
                     <span className="text-sm font-medium text-text-primary tabular-nums">
-                      ${cat.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{cat.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="w-full h-1 bg-gray-bg rounded-full overflow-hidden">

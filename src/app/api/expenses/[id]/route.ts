@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getAuthenticatedUser, toExpense } from "@/lib/auth";
+import { getAuthenticatedUser, AuthError, toExpense } from "@/lib/auth";
 import type {
   UpdateExpensePayload,
   ExpenseCategory,
@@ -115,6 +115,9 @@ export async function PATCH(
 
     return NextResponse.json(toExpense(updated));
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[expenses.PATCH] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to update expense." },
@@ -148,6 +151,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[expenses.DELETE] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to delete expense." },

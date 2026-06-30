@@ -10,15 +10,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// A user of the Wealth Journal (simplified single-user mode for this demo;
-/// Supabase Auth would normally own this table, but we keep a local User so
-/// Row-Level-Security semantics can be modelled via user_id scoping).
+/// A registered user of Wealth Journal.
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?  // bcrypt hash — null only for legacy demo user
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   months Month[]
 }

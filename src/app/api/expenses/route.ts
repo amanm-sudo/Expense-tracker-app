@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   getAuthenticatedUser,
+  AuthError,
   isValidMonthId,
   toExpense,
 } from "@/lib/auth";
@@ -107,6 +108,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(toExpense(created), { status: 201 });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[expenses.POST] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to create expense." },

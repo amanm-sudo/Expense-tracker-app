@@ -1,7 +1,8 @@
 'use client';
 
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { Search, Bell, ChevronDown, LogOut } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
 interface TopBarProps {
@@ -24,17 +25,39 @@ function recentMonthLabels(count: number): string[] {
   return labels;
 }
 
+/** Get initials from a name */
+function getInitials(name: string): string {
+  if (!name) return 'U';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Generate avatar background color from name */
+function nameToColor(name: string): string {
+  const colors = ['#2D3B2D', '#A0522D', '#4A7C59', '#5C6B5C', '#8B4513', '#3D3D3D'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
 export default function TopBar({ pageTitle = 'Financial Journal' }: TopBarProps) {
-  const { selectedMonth, setSelectedMonth, refreshAll } = useStore();
+  const { selectedMonth, setSelectedMonth, refreshAll, setCurrentPage, addToast, userName } = useStore();
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const months = recentMonthLabels(6);
+  const initials = getInitials(userName);
+  const avatarBg = nameToColor(userName || 'U');
 
   const handleSelectMonth = (m: string) => {
     setSelectedMonth(m);
     setMonthDropdownOpen(false);
-    // Refresh all data for the newly selected month
     refreshAll();
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/login' });
   };
 
   return (
@@ -75,32 +98,68 @@ export default function TopBar({ pageTitle = 'Financial Journal' }: TopBarProps)
           )}
         </div>
 
-        {/* Reports button - only on some pages */}
-        <button className="hidden sm:block text-xs font-medium text-sage-dark bg-gray-bg px-4 py-1.5 rounded hover:bg-gray-border/60 transition-colors">
+        {/* Reports button */}
+        <button
+          onClick={() => addToast('Reports feature coming soon', 'info')}
+          className="hidden sm:block text-xs font-medium text-sage-dark bg-gray-bg px-4 py-1.5 rounded hover:bg-gray-border/60 transition-colors"
+        >
           Reports
         </button>
 
         {/* Search */}
-        <button className="text-text-secondary hover:text-text-primary transition-colors p-1">
+        <button
+          onClick={() => addToast('Search feature coming soon', 'info')}
+          className="text-text-secondary hover:text-text-primary transition-colors p-1"
+          aria-label="Search"
+        >
           <Search size={20} strokeWidth={1.5} />
         </button>
 
         {/* Notifications */}
-        <button className="relative text-text-secondary hover:text-text-primary transition-colors p-1">
+        <button
+          onClick={() => addToast('No new notifications', 'info')}
+          className="relative text-text-secondary hover:text-text-primary transition-colors p-1"
+          aria-label="Notifications"
+        >
           <Bell size={20} strokeWidth={1.5} />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-rust-dark rounded-full" />
         </button>
 
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-gray-bg border border-gray-border overflow-hidden flex items-center justify-center text-xs font-medium text-text-secondary">
-          <img
-            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face"
-            alt="Profile"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
+        {/* Avatar — click to open profile dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold
+              hover:ring-2 hover:ring-sage-dark/30 transition-all"
+            style={{ backgroundColor: avatarBg }}
+            aria-label="Profile menu"
+            title={userName}
+          >
+            {initials}
+          </button>
+          {profileOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setProfileOpen(false)} />
+              <div className="absolute right-0 top-10 bg-white border border-gray-border rounded-md shadow-card-lg py-1 z-40 min-w-[180px]">
+                <div className="px-4 py-3 border-b border-gray-border">
+                  <div className="text-sm font-medium text-text-primary">{userName}</div>
+                  <div className="text-xs text-text-muted mt-0.5">Signed in</div>
+                </div>
+                <button
+                  onClick={() => { setCurrentPage('settings'); setProfileOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-text-secondary hover:bg-gray-bg/50 transition-colors"
+                >
+                  Settings
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full text-left px-4 py-2.5 text-sm text-terracotta hover:bg-terracotta/5 transition-colors flex items-center gap-2"
+                >
+                  <LogOut size={14} />
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   getAuthenticatedUser,
+  AuthError,
   isValidMonthId,
   getPreviousMonthId,
   daysInMonth,
@@ -163,6 +164,9 @@ export async function GET(
 
     return NextResponse.json(body);
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[analytics.GET] error:", err);
     return NextResponse.json<ApiError>(
       { error: "Failed to compute analytics." },

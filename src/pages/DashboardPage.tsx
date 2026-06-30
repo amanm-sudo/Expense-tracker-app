@@ -13,7 +13,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function DashboardPage() {
-  const { dashboard, openAddExpense } = useStore();
+  const { dashboard, openAddExpense, addToast } = useStore();
 
   return (
     <div className="min-h-full flex flex-col">
@@ -31,7 +31,7 @@ export default function DashboardPage() {
               Remaining Balance
             </h2>
             <div className="font-serif-display text-3xl md:text-4xl text-text-primary mb-5">
-              ${dashboard.remainingBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{dashboard.remainingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
 
             <hr className="border-gray-border mb-5" />
@@ -42,7 +42,7 @@ export default function DashboardPage() {
                   Income This Month
                 </div>
                 <div className="font-serif-display text-lg text-text-primary">
-                  ${dashboard.incomeThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{dashboard.incomeThisMonth.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <div>
@@ -50,7 +50,7 @@ export default function DashboardPage() {
                   Expenses Tracked
                 </div>
                 <div className="font-serif-display text-lg text-terracotta">
-                  ${dashboard.expensesTracked.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{dashboard.expensesTracked.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -87,7 +87,10 @@ export default function DashboardPage() {
                 The chronological flow of your capital.
               </p>
             </div>
-            <button className="text-xs font-medium text-text-primary hover:underline transition-all pb-0.5">
+            <button
+              onClick={() => addToast('Full transaction history coming soon', 'info')}
+              className="text-xs font-medium text-text-primary hover:underline transition-all pb-0.5"
+            >
               VIEW ALL
             </button>
           </div>
@@ -122,7 +125,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="text-base font-semibold text-text-primary tabular-nums">
-                      ${expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
                 );
@@ -145,7 +148,10 @@ export default function DashboardPage() {
             <h3 className="font-serif-display text-xl md:text-2xl text-white mb-4 max-w-md leading-snug">
               Visualizing your future through every intentional choice.
             </h3>
-            <button className="px-6 py-2.5 border border-white/60 text-white text-sm font-medium rounded hover:bg-white/10 transition-colors">
+            <button
+              onClick={() => addToast('Trajectory view coming soon', 'info')}
+              className="px-6 py-2.5 border border-white/60 text-white text-sm font-medium rounded hover:bg-white/10 transition-colors"
+            >
               Explore Trajectory
             </button>
           </div>

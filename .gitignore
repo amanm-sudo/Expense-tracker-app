@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — keep .env.example but NOT actual .env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -52,3 +56,8 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# SQLite database files — never commit the DB
+/db/*.db
+/db/*.db-shm
+/db/*.db-wal

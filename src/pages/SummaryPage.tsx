@@ -47,7 +47,7 @@ export default function SummaryPage() {
               Total Monthly Spend
             </div>
             <div className="font-serif-display text-[28px] text-text-primary mb-4">
-              ${summary.totalMonthlySpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{summary.totalMonthlySpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="w-full h-1 bg-gray-bg rounded-full overflow-hidden">
               <div className="h-full bg-sage-dark rounded-full" style={{ width: '50%' }} />
@@ -60,7 +60,7 @@ export default function SummaryPage() {
               Total Amount Saved
             </div>
             <div className="font-serif-display text-[28px] text-text-primary mb-4">
-              ${summary.totalAmountSaved.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{summary.totalAmountSaved.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="w-full h-1 bg-gray-bg rounded-full overflow-hidden">
               <div className="h-full bg-sage-dark rounded-full" style={{ width: '38%' }} />
@@ -92,7 +92,7 @@ export default function SummaryPage() {
                     {Icon && <Icon size={20} className="text-white mb-3" strokeWidth={1.5} />}
                     <div className="font-serif-display text-lg text-white mb-1">{cat.name}</div>
                     <div className="font-serif-display text-[22px] text-white mb-1">
-                      ${cat.amount.toLocaleString()}
+                      ₹{cat.amount.toLocaleString('en-IN')}
                     </div>
                     {cat.trend && (
                       <div className="text-white/60 text-[11px]">{cat.trend}</div>
@@ -144,7 +144,7 @@ export default function SummaryPage() {
                       <span className="text-[13px] text-text-secondary">{cat.subLabel}</span>
                       <div className="flex items-center gap-3">
                         <span className="font-serif-display text-lg text-text-primary">
-                          ${cat.amount.toLocaleString()}
+                          ₹{cat.amount.toLocaleString('en-IN')}
                         </span>
                         <span className="text-[13px] text-text-secondary">{cat.percentage}%</span>
                       </div>

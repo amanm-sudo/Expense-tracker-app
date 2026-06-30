@@ -86,7 +86,7 @@ export default function AddExpenseModal() {
               Amount
             </label>
             <div className="flex items-center gap-2">
-              <span className="font-serif-display text-2xl text-text-muted">$</span>
+              <span className="font-serif-display text-2xl text-text-muted">₹</span>
               <input
                 type="number"
                 step="0.01"
