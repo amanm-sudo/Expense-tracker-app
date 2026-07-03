@@ -548,21 +548,29 @@ export const useStore = create<AppState>((set, get) => ({
       if (!response.ok) throw new Error('Failed to load month data');
       const data = (await response.json()) as MonthDataResponse;
 
-      const totalExpenses = data.expenses.reduce((sum, e) => sum + e.amount, 0);
+      // Separate credits from expenses — credits add to balance, expenses subtract
+      const totalExpenses = data.expenses
+        .filter((e) => e.type !== 'credit')
+        .reduce((sum, e) => sum + e.amount, 0);
+      const totalCredits = data.expenses
+        .filter((e) => e.type === 'credit')
+        .reduce((sum, e) => sum + e.amount, 0);
+
       const income = data.income || 0;
       const recent = [...data.expenses]
         .sort((a, b) => (a.date < b.date ? 1 : -1))
         .slice(0, 10);
 
       // Progress percent: ratio of remaining balance to income (clamped 0-100)
+      const remainingBalance = income + totalCredits - totalExpenses;
       const progressPercent = income > 0
-        ? Math.max(0, Math.min(100, Math.round(((income - totalExpenses) / income) * 100)))
+        ? Math.max(0, Math.min(100, Math.round((remainingBalance / income) * 100)))
         : 0;
 
       set((state) => ({
         dashboard: {
           ...state.dashboard,
-          remainingBalance: income - totalExpenses,
+          remainingBalance,
           incomeThisMonth: income,
           expensesTracked: totalExpenses,
           recentExpenses: recent,
