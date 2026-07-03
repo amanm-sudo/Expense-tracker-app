@@ -57,6 +57,7 @@ model Emi {
 }
 
 /// Individual expense entries tied to a month.
+/// `type` is either "expense" (default) or "credit" (income from any source).
 model Expense {
   id          String   @id @default(cuid())
   monthId     String
@@ -65,6 +66,7 @@ model Expense {
   description String?
   name        String?
   date        String   // ISO date string "YYYY-MM-DD"
+  type        String   @default("expense") // "expense" | "credit"
   createdAt   DateTime @default(now())
 
   month       Month    @relation(fields: [monthId], references: [id], onDelete: Cascade)

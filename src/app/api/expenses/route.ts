@@ -12,7 +12,7 @@ import type {
   ApiError,
 } from "@/types";
 
-const VALID_CATEGORIES: ExpenseCategory[] = [
+const VALID_CATEGORIES: (ExpenseCategory | string)[] = [
   "Housing",
   "Food",
   "Transport",
@@ -25,6 +25,13 @@ const VALID_CATEGORIES: ExpenseCategory[] = [
   "Shopping",
   "Wellness",
   "Other",
+  // Credit categories
+  "Salary",
+  "Freelance",
+  "Gift",
+  "Refund",
+  "Investment",
+  "Bonus",
 ];
 
 /** Auto-provision a Month row for the given user + monthId. */
@@ -54,7 +61,7 @@ export async function POST(req: NextRequest) {
     const { id: userId } = await getAuthenticatedUser();
     const body = (await req.json()) as Partial<CreateExpensePayload>;
 
-    const { monthId, amount, category, description, date } = body;
+    const { monthId, amount, category, description, date, type } = body;
 
     if (typeof monthId !== "string" || !isValidMonthId(monthId)) {
       return NextResponse.json<ApiError>(
@@ -99,10 +106,11 @@ export async function POST(req: NextRequest) {
       data: {
         monthId: month.id,
         amount: amt,
-        category: category as ExpenseCategory,
+        category: category as string,
         description: desc,
         name: desc,
         date,
+        type: type === 'credit' ? 'credit' : 'expense',
       },
     });
 

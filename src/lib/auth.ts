@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { db } from "@/lib/db";
-import type { Expense, ExpenseCategory } from "@/types";
+import type { Expense, ExpenseCategory, CreditCategory, EntryType } from "@/types";
 
 /**
  * Returns the authenticated user from the NextAuth session.
@@ -54,6 +54,17 @@ export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   Other: "Receipt",
 };
 
+/** Map a CreditCategory to a lucide icon name used by the frontend. */
+export const CREDIT_CATEGORY_ICONS: Record<CreditCategory, string> = {
+  Salary: "Banknote",
+  Freelance: "Laptop",
+  Gift: "Gift",
+  Refund: "RotateCcw",
+  Investment: "TrendingUp",
+  Bonus: "Award",
+  Other: "CircleDollarSign",
+};
+
 /** Palette used for analytics category-breakdown bars (matches design system). */
 export const CATEGORY_COLORS: string[] = [
   "#2D3B2D", // sage-dark
@@ -91,16 +102,23 @@ export function toExpense(row: {
   description: string | null;
   name: string | null;
   date: string;
+  type?: string | null;
 }): Expense {
-  const category = row.category as ExpenseCategory;
+  const entryType: EntryType = row.type === 'credit' ? 'credit' : 'expense';
+  const category = row.category as ExpenseCategory | CreditCategory;
+  const icon =
+    entryType === 'credit'
+      ? (CREDIT_CATEGORY_ICONS[category as CreditCategory] ?? 'CircleDollarSign')
+      : (CATEGORY_ICONS[category as ExpenseCategory] ?? 'Receipt');
   return {
     id: row.id,
     name: row.name || row.description || row.category,
     category,
-    categoryIcon: CATEGORY_ICONS[category] ?? "Receipt",
+    categoryIcon: icon,
     description: row.description ?? undefined,
     date: row.date,
     amount: row.amount,
+    type: entryType,
   };
 }
 

@@ -1,19 +1,22 @@
 'use client';
 
 import { useStore } from '@/store/useStore';
-import { Coffee, Home, ShoppingBag, Receipt, Plus, Trash2 } from 'lucide-react';
+import {
+  Coffee, Home, ShoppingBag, Receipt, Plus, Trash2, Pencil,
+  Banknote, Laptop, Gift, RotateCcw, TrendingUp, Award, CircleDollarSign,
+  Bus, Music, Heart, UtensilsCrossed, Globe, Monitor, Dumbbell,
+} from 'lucide-react';
 import TopBar from '@/components/layout/TopBar';
 import { format } from 'date-fns';
 
 const iconMap: Record<string, React.ElementType> = {
-  Coffee,
-  Home,
-  ShoppingBag,
-  Receipt,
+  Coffee, Home, ShoppingBag, Receipt,
+  Bus, Music, Heart, UtensilsCrossed, Globe, Monitor, Dumbbell,
+  Banknote, Laptop, Gift, RotateCcw, TrendingUp, Award, CircleDollarSign,
 };
 
 export default function DashboardPage() {
-  const { dashboard, openAddExpense, addToast, deleteExpense } = useStore();
+  const { dashboard, openAddExpense, addToast, deleteExpense, openEditExpense } = useStore();
 
   return (
     <div className="min-h-full flex flex-col">
@@ -100,11 +103,12 @@ export default function DashboardPage() {
               <div className="p-8 text-center">
                 <Receipt size={48} className="mx-auto text-text-muted mb-3" />
                 <p className="text-text-secondary text-sm mb-2">No entries yet</p>
-                <p className="text-text-muted text-xs">Add your first expense to get started</p>
+                <p className="text-text-muted text-xs">Add your first expense or credit to get started</p>
               </div>
             ) : (
               dashboard.recentExpenses.map((expense, index) => {
-                const Icon = iconMap[expense.categoryIcon] || Receipt;
+                const isCredit = expense.type === 'credit';
+                const Icon = iconMap[expense.categoryIcon] || (isCredit ? Banknote : Receipt);
                 return (
                   <div
                     key={expense.id}
@@ -113,26 +117,57 @@ export default function DashboardPage() {
                     `}
                     style={{ animationDelay: `${index * 60}ms` }}
                   >
-                    <div className="w-10 h-10 rounded-full bg-gray-bg flex items-center justify-center flex-shrink-0">
-                      <Icon size={18} className="text-sage-dark" strokeWidth={1.5} />
+                    {/* Icon bubble */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
+                      ${isCredit ? 'bg-emerald-50' : 'bg-gray-bg'}`}
+                    >
+                      <Icon
+                        size={18}
+                        className={isCredit ? 'text-emerald-600' : 'text-sage-dark'}
+                        strokeWidth={1.5}
+                      />
                     </div>
+
+                    {/* Name + meta */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-[15px] font-medium text-text-primary truncate">
-                        {expense.name}
+                      <div className="flex items-center gap-2">
+                        <div className="text-[15px] font-medium text-text-primary truncate">
+                          {expense.name}
+                        </div>
+                        {isCredit && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 flex-shrink-0">
+                            Credit
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-text-secondary">
                         {expense.category} • {format(new Date(expense.date), 'MMM dd, yyyy')}
                       </div>
                     </div>
-                    <div className="text-base font-semibold text-text-primary tabular-nums">
-                      ₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                    {/* Amount */}
+                    <div className={`text-base font-semibold tabular-nums flex-shrink-0
+                      ${isCredit ? 'text-emerald-600' : 'text-text-primary'}`}
+                    >
+                      {isCredit ? '+' : ''}₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
+
+                    {/* Edit button */}
+                    <button
+                      onClick={() => openEditExpense(expense)}
+                      title="Edit entry"
+                      className="ml-1 p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-500 text-text-muted transition-all duration-150 flex-shrink-0"
+                    >
+                      <Pencil size={14} strokeWidth={1.8} />
+                    </button>
+
+                    {/* Delete button */}
                     <button
                       onClick={() => deleteExpense(expense.id)}
                       title="Remove entry"
-                      className="ml-2 p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 text-text-muted transition-all duration-150 flex-shrink-0"
+                      className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 text-text-muted transition-all duration-150 flex-shrink-0"
                     >
-                      <Trash2 size={15} strokeWidth={1.8} />
+                      <Trash2 size={14} strokeWidth={1.8} />
                     </button>
                   </div>
                 );
@@ -182,7 +217,7 @@ export default function DashboardPage() {
       {/* Mobile FAB */}
       <button
         onClick={openAddExpense}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-sage-dark text-white rounded-full shadow-card-lg 
+        className="fixed bottom-6 right-6 w-14 h-14 bg-sage-dark text-white rounded-full shadow-card-lg
           flex items-center justify-center lg:hidden z-30 active:scale-95 transition-transform"
         aria-label="Add expense"
       >

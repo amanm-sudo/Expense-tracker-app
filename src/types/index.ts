@@ -14,16 +14,28 @@ export type ExpenseCategory =
   | 'Wellness'
   | 'Other';
 
+export type CreditCategory =
+  | 'Salary'
+  | 'Freelance'
+  | 'Gift'
+  | 'Refund'
+  | 'Investment'
+  | 'Bonus'
+  | 'Other';
+
+export type EntryType = 'expense' | 'credit';
+
 // ─── Expense ────────────────────────────────────────────────────────
 
 export interface Expense {
   id: string;
   name: string;
-  category: ExpenseCategory;
+  category: ExpenseCategory | CreditCategory;
   categoryIcon: string; // lucide icon name
   description?: string;
   date: string; // ISO date string
   amount: number;
+  type: EntryType; // 'expense' | 'credit'
 }
 
 // ─── Dashboard ──────────────────────────────────────────────────────
@@ -42,9 +54,10 @@ export interface DashboardData {
 
 export interface AddExpenseFormData {
   amount: string;
-  category: ExpenseCategory | '';
+  category: ExpenseCategory | CreditCategory | '';
   description: string;
   date: string; // ISO date string
+  type: EntryType;
 }
 
 // ─── Analytics ──────────────────────────────────────────────────────
@@ -171,17 +184,19 @@ export interface MonthDataResponse {
 export interface CreateExpensePayload {
   monthId: MonthId;
   amount: number;
-  category: ExpenseCategory;
+  category: ExpenseCategory | CreditCategory;
   description?: string;
   date: string;
+  type?: EntryType;
 }
 
 /** Body for PATCH /api/expenses/[id] */
 export interface UpdateExpensePayload {
   amount?: number;
-  category?: ExpenseCategory;
+  category?: ExpenseCategory | CreditCategory;
   description?: string;
   date?: string;
+  type?: EntryType;
 }
 
 /** Body for PATCH /api/months/[monthId] (set income) */

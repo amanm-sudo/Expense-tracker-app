@@ -15,6 +15,7 @@ import type {
   MonthDataResponse,
   AiInsightsResponse,
   MonthId,
+  EntryType,
 } from '@/types';
 
 // ─── Month label ⇄ monthId helpers ──────────────────────────────────
@@ -70,6 +71,7 @@ const demoRecentExpenses: Expense[] = [
     description: 'Morning coffee run',
     date: '2024-01-12',
     amount: 6.5,
+    type: 'expense',
   },
   {
     id: '2',
@@ -79,6 +81,7 @@ const demoRecentExpenses: Expense[] = [
     description: 'Monthly rent payment',
     date: '2024-01-01',
     amount: 1800.0,
+    type: 'expense',
   },
   {
     id: '3',
@@ -88,6 +91,7 @@ const demoRecentExpenses: Expense[] = [
     description: 'Weekly groceries',
     date: '2024-01-10',
     amount: 142.1,
+    type: 'expense',
   },
 ];
 
@@ -249,6 +253,11 @@ interface AppState {
   openAddExpense: () => void;
   closeAddExpense: () => void;
 
+  // Edit expense modal
+  editingExpense: Expense | null;
+  openEditExpense: (expense: Expense) => void;
+  closeEditExpense: () => void;
+
   // Dashboard data
   dashboard: DashboardData;
   addExpense: (expense: Expense) => void;
@@ -274,6 +283,7 @@ interface AppState {
 
   // Backend integration
   onAddExpense: (formData: AddExpenseFormData) => Promise<void>;
+  onEditExpense: (expenseId: string, formData: AddExpenseFormData) => Promise<void>;
   onFetchMonthData: (month: string, year: number) => Promise<void>;
   onGetAIInsights: (month: string, year: number) => Promise<AIPersonalNote | null>;
   onFetchAnalytics: (month: string, year: number) => Promise<void>;
@@ -323,6 +333,11 @@ export const useStore = create<AppState>((set, get) => ({
   openAddExpense: () => set({ isAddExpenseOpen: true }),
   closeAddExpense: () => set({ isAddExpenseOpen: false }),
 
+  // Edit expense
+  editingExpense: null,
+  openEditExpense: (expense) => set({ editingExpense: expense }),
+  closeEditExpense: () => set({ editingExpense: null }),
+
   // Data — demo defaults so UI renders immediately
   dashboard: demoDashboard,
   analytics: demoAnalytics,
@@ -334,8 +349,13 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       dashboard: {
         ...state.dashboard,
-        expensesTracked: state.dashboard.expensesTracked + expense.amount,
-        remainingBalance: state.dashboard.remainingBalance - expense.amount,
+        // Credits add to balance; expenses subtract
+        expensesTracked: expense.type === 'credit'
+          ? state.dashboard.expensesTracked
+          : state.dashboard.expensesTracked + expense.amount,
+        remainingBalance: expense.type === 'credit'
+          ? state.dashboard.remainingBalance + expense.amount
+          : state.dashboard.remainingBalance - expense.amount,
         recentExpenses: [expense, ...state.dashboard.recentExpenses].slice(0, 10),
       },
     })),
@@ -347,12 +367,18 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => {
         const deleted = state.dashboard.recentExpenses.find((e) => e.id === expenseId);
         const amount = deleted?.amount ?? 0;
+        const isCredit = deleted?.type === 'credit';
         return {
           dashboard: {
             ...state.dashboard,
             recentExpenses: state.dashboard.recentExpenses.filter((e) => e.id !== expenseId),
-            expensesTracked: Math.max(0, state.dashboard.expensesTracked - amount),
-            remainingBalance: state.dashboard.remainingBalance + amount,
+            // Reversing a credit reduces balance; reversing an expense adds back
+            expensesTracked: isCredit
+              ? state.dashboard.expensesTracked
+              : Math.max(0, state.dashboard.expensesTracked - amount),
+            remainingBalance: isCredit
+              ? state.dashboard.remainingBalance - amount
+              : state.dashboard.remainingBalance + amount,
           },
         };
       });
@@ -388,7 +414,7 @@ export const useStore = create<AppState>((set, get) => ({
   // ─── Backend integration ────────────────────────────────────────
 
   onAddExpense: async (formData) => {
-    const { amount, category, description, date } = formData;
+    const { amount, category, description, date, type } = formData;
     if (!amount || !category) {
       get().addToast('Amount and category are required', 'error');
       throw new Error('Amount and category are required');
@@ -406,6 +432,7 @@ export const useStore = create<AppState>((set, get) => ({
           category: category as ExpenseCategory,
           description,
           date,
+          type: type || 'expense',
         }),
       });
 
@@ -416,20 +443,98 @@ export const useStore = create<AppState>((set, get) => ({
 
       const newExpense = (await response.json()) as Expense;
 
-      // Merge into dashboard state
+      // Merge into dashboard state — credit adds to balance, expense subtracts
       set((state) => ({
         dashboard: {
           ...state.dashboard,
-          expensesTracked: state.dashboard.expensesTracked + newExpense.amount,
-          remainingBalance: state.dashboard.remainingBalance - newExpense.amount,
+          expensesTracked: newExpense.type === 'credit'
+            ? state.dashboard.expensesTracked
+            : state.dashboard.expensesTracked + newExpense.amount,
+          remainingBalance: newExpense.type === 'credit'
+            ? state.dashboard.remainingBalance + newExpense.amount
+            : state.dashboard.remainingBalance - newExpense.amount,
           recentExpenses: [newExpense, ...state.dashboard.recentExpenses].slice(0, 10),
         },
       }));
 
-      get().addToast('Entry recorded successfully', 'success');
+      get().addToast(
+        newExpense.type === 'credit' ? 'Credit recorded successfully' : 'Entry recorded successfully',
+        'success'
+      );
       get().closeAddExpense();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to record entry';
+      get().addToast(message, 'error');
+      throw err;
+    }
+  },
+
+  onEditExpense: async (expenseId, formData) => {
+    const { amount, category, description, date, type } = formData;
+    if (!amount || !category) {
+      get().addToast('Amount and category are required', 'error');
+      throw new Error('Amount and category are required');
+    }
+
+    try {
+      const response = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          category: category as ExpenseCategory,
+          description,
+          date,
+          type: type || 'expense',
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to update entry');
+      }
+
+      const updatedExpense = (await response.json()) as Expense;
+
+      // Replace the old expense in the list
+      set((state) => {
+        const old = state.dashboard.recentExpenses.find((e) => e.id === expenseId);
+        const oldAmount = old?.amount ?? 0;
+        const wasCredit = old?.type === 'credit';
+        const isNowCredit = updatedExpense.type === 'credit';
+
+        // Reverse old entry's effect
+        let expensesTracked = wasCredit
+          ? state.dashboard.expensesTracked
+          : state.dashboard.expensesTracked - oldAmount;
+        let remainingBalance = wasCredit
+          ? state.dashboard.remainingBalance - oldAmount
+          : state.dashboard.remainingBalance + oldAmount;
+
+        // Apply new entry's effect
+        expensesTracked = isNowCredit
+          ? expensesTracked
+          : expensesTracked + updatedExpense.amount;
+        remainingBalance = isNowCredit
+          ? remainingBalance + updatedExpense.amount
+          : remainingBalance - updatedExpense.amount;
+
+        return {
+          dashboard: {
+            ...state.dashboard,
+            expensesTracked: Math.max(0, expensesTracked),
+            remainingBalance,
+            recentExpenses: state.dashboard.recentExpenses.map((e) =>
+              e.id === expenseId ? updatedExpense : e
+            ),
+          },
+          editingExpense: null,
+        };
+      });
+
+      get().addToast('Entry updated successfully', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update entry';
       get().addToast(message, 'error');
       throw err;
     }

@@ -7,7 +7,7 @@ import type {
   ApiError,
 } from "@/types";
 
-const VALID_CATEGORIES: ExpenseCategory[] = [
+const VALID_CATEGORIES: string[] = [
   "Housing",
   "Food",
   "Transport",
@@ -20,6 +20,13 @@ const VALID_CATEGORIES: ExpenseCategory[] = [
   "Shopping",
   "Wellness",
   "Other",
+  // Credit categories
+  "Salary",
+  "Freelance",
+  "Gift",
+  "Refund",
+  "Investment",
+  "Bonus",
 ];
 
 function isValidDate(s: string): boolean {
@@ -57,10 +64,11 @@ export async function PATCH(
 
     const data: {
       amount?: number;
-      category?: ExpenseCategory;
+      category?: string;
       description?: string | null;
       name?: string | null;
       date?: string;
+      type?: string;
     } = {};
 
     if (body.amount !== undefined) {
@@ -75,13 +83,13 @@ export async function PATCH(
     }
 
     if (body.category !== undefined) {
-      if (!VALID_CATEGORIES.includes(body.category as ExpenseCategory)) {
+      if (!VALID_CATEGORIES.includes(body.category as string)) {
         return NextResponse.json<ApiError>(
           { error: "Invalid category." },
           { status: 400 },
         );
       }
-      data.category = body.category as ExpenseCategory;
+      data.category = body.category as string;
     }
 
     if (body.description !== undefined) {
@@ -101,6 +109,10 @@ export async function PATCH(
         );
       }
       data.date = body.date;
+    }
+
+    if (body.type !== undefined) {
+      data.type = body.type === 'credit' ? 'credit' : 'expense';
     }
 
     if (Object.keys(data).length === 0) {
