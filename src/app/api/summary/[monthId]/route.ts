@@ -55,16 +55,25 @@ export async function GET(
         : Promise.resolve([]),
     ]);
 
+    // Separate credits from regular expenses
     const totalMonthlySpend = round2(
-      currentExpenses.reduce((s, e) => s + e.amount, 0),
+      currentExpenses
+        .filter((e) => e.type !== 'credit')
+        .reduce((s, e) => s + e.amount, 0),
+    );
+    const totalCredits = round2(
+      currentExpenses
+        .filter((e) => e.type === 'credit')
+        .reduce((s, e) => s + e.amount, 0),
     );
     const income = month.income;
+    // Saved = income + credits received - money spent
     const totalAmountSaved =
-      income > 0 ? round2(income - totalMonthlySpend) : 0;
+      income > 0 ? round2(income + totalCredits - totalMonthlySpend) : 0;
 
     // ── Per-category totals (this month + previous month for trend) ──
     const categoryTotals = new Map<string, number>();
-    for (const e of currentExpenses) {
+    for (const e of currentExpenses.filter((e) => e.type !== 'credit')) {
       categoryTotals.set(
         e.category,
         (categoryTotals.get(e.category) ?? 0) + e.amount,
@@ -99,6 +108,7 @@ export async function GET(
         },
       ];
     } else {
+      // Category percentages are relative to spend-only total (excluding credits)
       const total = totalMonthlySpend;
       const pct = (amt: number) => Math.round((amt / total) * 100);
 

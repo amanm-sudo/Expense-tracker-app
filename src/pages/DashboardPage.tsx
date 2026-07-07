@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import {
   Coffee, Home, ShoppingBag, Receipt, Plus, Trash2, Pencil,
@@ -7,6 +8,7 @@ import {
   Bus, Music, Heart, UtensilsCrossed, Globe, Monitor, Dumbbell,
 } from 'lucide-react';
 import TopBar from '@/components/layout/TopBar';
+import AllExpensesModal from '@/components/shared/AllExpensesModal';
 import { format } from 'date-fns';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -17,6 +19,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 export default function DashboardPage() {
   const { dashboard, openAddExpense, addToast, deleteExpense, openEditExpense } = useStore();
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
 
   return (
     <div className="min-h-full flex flex-col">
@@ -91,7 +94,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <button
-              onClick={() => addToast('Full transaction history coming soon', 'info')}
+              onClick={() => setShowAllExpenses(true)}
               className="text-xs font-medium text-text-primary hover:underline transition-all pb-0.5"
             >
               VIEW ALL
@@ -223,6 +226,10 @@ export default function DashboardPage() {
       >
         <Plus size={24} />
       </button>
+      {/* All Expenses Modal */}
+      {showAllExpenses && (
+        <AllExpensesModal onClose={() => setShowAllExpenses(false)} />
+      )}
     </div>
   );
 }
