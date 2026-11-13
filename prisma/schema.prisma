@@ -21,6 +21,7 @@ model User {
 
   months        Month[]
   importToken   ImportToken?
+  importMode    String   @default("trusted") // "trusted" | "review"
   importQueue   ImportQueue[]
   merchantRules MerchantRule[]
 }
@@ -57,7 +58,7 @@ model ImportQueue {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
-  @@index([userId, dedupeKey])
+  @@unique([userId, dedupeKey]) // atomic SMS idempotency
 }
 
 /// User-taught merchant → category mapping (learned from review corrections).
