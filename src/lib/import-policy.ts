@@ -26,10 +26,10 @@ export function decideAutoImport(
   if (parsed.txnType !== "expense") return review("incoming_credit");
   if (parsed.bank !== "canara" && parsed.bank !== "ubi") return review("unknown_bank");
 
-  const senderText = sender.toUpperCase().replace(/^[A-Z]{2}-/, "");
+  const senderText = sender.toUpperCase().trim().replace(/^[A-Z]{2}-/, "");
   const knownSender = (parsed.bank === "canara"
     ? ["CANBNK", "CANARA", "CNRB"]
-    : ["UBIBNK", "UNIONB", "UBIN"]).some((name) => senderText.includes(name));
+    : ["UBIBNK", "UNIONB", "UBIN"]).includes(senderText);
   if (!knownSender) return review("unverified_sender");
 
   if (!parsed.isUpi || !/\bUPI\b/i.test(body)) return review("not_explicit_upi");

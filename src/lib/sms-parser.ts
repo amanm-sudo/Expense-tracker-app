@@ -112,6 +112,13 @@ function detectDirection(body: string, amountIndex: number): "expense" | "credit
 }
 
 /** Normalise DD-Mon-YY, DD-Mon-YYYY, DD-MM-YY, DD/MM/YYYY to ISO. */
+/** Validate a full date so an impossible SMS date never enters the ledger. */
+function calendarDate(year: number, month: number, day: number): boolean {
+  if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+}
+
 function normaliseDate(raw: string): string | null {
   const value = raw.trim();
 
@@ -121,7 +128,7 @@ function normaliseDate(raw: string): string | null {
     const day = parseInt(named[1], 10);
     const month = MONTH_MAP[named[2].slice(0, 3).toLowerCase()];
     const year = named[3].length === 2 ? 2000 + parseInt(named[3], 10) : parseInt(named[3], 10);
-    if (month && day >= 1 && day <= 31) {
+    if (month && calendarDate(year, Number(month), day)) {
       return `${year}-${month}-${String(day).padStart(2, "0")}`;
     }
   }
@@ -132,12 +139,15 @@ function normaliseDate(raw: string): string | null {
     const day = parseInt(numeric[1], 10);
     const month = parseInt(numeric[2], 10);
     const year = numeric[3].length === 2 ? 2000 + parseInt(numeric[3], 10) : parseInt(numeric[3], 10);
-    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+    if (calendarDate(year, month, day)) {
       return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return calendarDate(year, month, day) ? value : null;
+  }
   return null;
 }
 

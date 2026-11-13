@@ -11,7 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "test:sms": "vitest run src/lib/sms-parser.test.ts",
+    "test:sms": "vitest run src/lib/sms-parser.test.ts src/lib/import-policy.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -54,3 +54,17 @@ describe("trusted UPI import policy", () => {
     expect(first).not.toBe(buildImportDedupeKey("user-2", parsed, "CANBNK", good));
   });
 });
+
+describe("invalid calendar dates", () => {
+  it("never considers February 31 an explicit date", () => {
+    const sms = "Rs.450 debited from A/c XX1234 on 31-02-2026 for UPI/234567890123/zomato@okaxis";
+    const parsed = parseSms(sms, "CANBNK")!;
+    expect(parsed.hasExplicitDate).toBe(false);
+    expect(decideAutoImport(parsed, "CANBNK", sms, category, "trusted").autoApprove).toBe(false);
+  });
+
+  it("does not trust lookalike sender names", () => {
+    const parsed = parseSms(good, "X-CANBNK")!;
+    expect(decideAutoImport(parsed, "FRAUDCANBNK", good, category, "trusted").autoApprove).toBe(false);
+  });
+});
