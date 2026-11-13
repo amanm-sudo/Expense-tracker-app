@@ -59,6 +59,36 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
+  // User-configurable automatic UPI posting policy
+  const [importMode, setImportMode] = useState<'trusted' | 'review'>('review');
+  const [savingImportMode, setSavingImportMode] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/import/preferences')
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error('fetch failed')))
+      .then((data: { mode: 'trusted' | 'review' }) => { if (active) setImportMode(data.mode); })
+      .catch(() => { if (active) addToast('Could not load import settings', 'error'); });
+    return () => { active = false; };
+  }, [addToast]);
+
+  const saveImportMode = async (mode: 'trusted' | 'review') => {
+    setSavingImportMode(true);
+    try {
+      const response = await fetch('/api/import/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!response.ok) throw new Error('Failed to save');
+      setImportMode(mode);
+      addToast('UPI import preference updated', 'success');
+    } catch {
+      addToast('Could not update UPI import preference', 'error');
+    } finally {
+      setSavingImportMode(false);
+    }
+  };
+
   // UPI parser playground
   const [tokenRevealed, setTokenRevealed] = useState(false);
   const [testFrom, setTestFrom] = useState('CANBNK');
@@ -215,6 +245,22 @@ export default function SettingsPage() {
               <h3 className="font-serif-display text-lg text-text-primary mb-1">UPI Auto-Import</h3>
               <p className="text-text-secondary text-xs mb-5">Automatically capture every UPI payment from Canara Bank or Union Bank of India.</p>
 
+              <div className="mb-5 border border-gray-border bg-gray-bg/50 rounded p-4">
+                <label htmlFor="import-policy" className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.08em] block mb-2">
+                  Automatic recording
+                </label>
+                <select id="import-policy" value={importMode} disabled={savingImportMode}
+                  onChange={(event) => void saveImportMode(event.target.value as 'trusted' | 'review')}
+                  className="w-full bg-white border border-gray-border rounded px-3 py-2 text-sm text-text-primary">
+                  <option value="trusted">Automatically record trusted UPI debits</option>
+                  <option value="review">Review all SMS transactions first</option>
+                </select>
+                <p className="text-text-secondary text-xs mt-2">
+                  Trusted mode only auto-posts known-bank outgoing UPI payments with a reference, payee VPA,
+                  explicit date and confidently identified category. Credits, reversals and uncertain alerts go to review.
+                </p>
+              </div>
+
               <div className="mb-4">
                 <label className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.08em] block mb-2">Webhook URL</label>
                 <div className="flex items-center gap-2">
@@ -260,8 +306,8 @@ export default function SettingsPage() {
                   {[
                     { n: '1', text: <span>Install <strong className="text-text-primary">SMS Forwarder</strong> (by Bogdan Balov) from Play Store.</span> },
                     { n: '2', text: <span>Add rule — Sender contains: <code className="bg-white border border-gray-border rounded px-1 text-xs">CANBNK</code> or <code className="bg-white border border-gray-border rounded px-1 text-xs">UBIBNK</code></span> },
-                    { n: '3', text: <span>Paste the Webhook URL and Secret Token. If the app supports headers, send the token as <code className="bg-white border border-gray-border rounded px-1 text-xs">X-Import-Secret</code>; otherwise append <code className="bg-white border border-gray-border rounded px-1 text-xs">?secret=…</code> to the URL.</span> },
-                    { n: <CheckCircle size={11} />, text: <span>Done — payments appear in <strong className="text-text-primary">Import Review</strong> automatically.</span>, green: true },
+                    { n: '3', text: <span>Paste the Webhook URL and Secret Token. Configure an HTTPS POST with JSON fields <code className="bg-white border border-gray-border rounded px-1 text-xs">from</code>, <code className="bg-white border border-gray-border rounded px-1 text-xs">body</code> and optional ISO <code className="bg-white border border-gray-border rounded px-1 text-xs">timestamp</code>. Pass the token using the <code className="bg-white border border-gray-border rounded px-1 text-xs">X-Import-Secret</code> HTTP header (never in the URL).</span> },
+                    { n: <CheckCircle size={11} />, text: <span>Done — trusted outgoing payments are added to your ledger and other parsed transactions appear in <strong className="text-text-primary">Import Review</strong>.</span>, green: true },
                   ].map((step, i) => (
                     <li key={i} className="flex items-start gap-2.5">
                       <span className={`flex-shrink-0 w-5 h-5 ${step.green ? 'bg-emerald-600' : 'bg-sage-dark'} text-white text-[10px] font-bold rounded-full flex items-center justify-center mt-0.5`}>

@@ -19,6 +19,8 @@ export interface ParsedSms {
   date: string;                  // ISO YYYY-MM-DD
   bank: SmsBank;
   confidence: number;            // 0–1 parse confidence
+  hasExplicitDate: boolean;
+  isUpi: boolean;
 }
 
 // ─── Bank profiles ──────────────────────────────────────────────────────────
@@ -110,6 +112,13 @@ function detectDirection(body: string, amountIndex: number): "expense" | "credit
 }
 
 /** Normalise DD-Mon-YY, DD-Mon-YYYY, DD-MM-YY, DD/MM/YYYY to ISO. */
+/** Validate a full date so an impossible SMS date never enters the ledger. */
+function calendarDate(year: number, month: number, day: number): boolean {
+  if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
+}
+
 function normaliseDate(raw: string): string | null {
   const value = raw.trim();
 
@@ -119,7 +128,7 @@ function normaliseDate(raw: string): string | null {
     const day = parseInt(named[1], 10);
     const month = MONTH_MAP[named[2].slice(0, 3).toLowerCase()];
     const year = named[3].length === 2 ? 2000 + parseInt(named[3], 10) : parseInt(named[3], 10);
-    if (month && day >= 1 && day <= 31) {
+    if (month && calendarDate(year, Number(month), day)) {
       return `${year}-${month}-${String(day).padStart(2, "0")}`;
     }
   }
@@ -130,12 +139,15 @@ function normaliseDate(raw: string): string | null {
     const day = parseInt(numeric[1], 10);
     const month = parseInt(numeric[2], 10);
     const year = numeric[3].length === 2 ? 2000 + parseInt(numeric[3], 10) : parseInt(numeric[3], 10);
-    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+    if (calendarDate(year, month, day)) {
       return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     }
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return calendarDate(year, month, day) ? value : null;
+  }
   return null;
 }
 
@@ -232,6 +244,15 @@ function resolveMerchant(vpa: string | null, hint: string | null): string | null
   return null;
 }
 
+/** Use Indian local date if the bank SMS does not include a date. */
+function indiaDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return [values.year, values.month, values.day].join("-");
+}
+
 // ─── Extraction ─────────────────────────────────────────────────────────────
 
 function scoreConfidence(opts: {
@@ -248,7 +269,7 @@ function scoreConfidence(opts: {
   return Math.round(Math.max(0.4, Math.min(0.95, score)) * 100) / 100;
 }
 
-function buildParsed(body: string, bank: SmsBank): ParsedSms | null {
+function buildParsed(body: string, bank: SmsBank, receivedAt: Date): ParsedSms | null {
   const amountInfo = findTransactionAmount(body);
   if (!amountInfo) return null;
 
@@ -266,7 +287,9 @@ function buildParsed(body: string, bank: SmsBank): ParsedSms | null {
     merchant,
     vpa,
     upiRef,
-    date: date ?? new Date().toISOString().slice(0, 10),
+    date: date ?? indiaDate(receivedAt),
+    hasExplicitDate: Boolean(date),
+    isUpi: /\b(?:UPI|VPA)\b|[a-z0-9._-]+@[a-z][a-z0-9.-]+/i.test(body),
     bank,
     confidence: scoreConfidence({
       hasVpa: Boolean(vpa),
@@ -283,11 +306,11 @@ function buildParsed(body: string, bank: SmsBank): ParsedSms | null {
  * Parse a bank SMS into structured data.
  * Returns null if the message is not a recognisable UPI transaction alert.
  */
-export function parseSms(smsBody: string, smsFrom: string): ParsedSms | null {
+export function parseSms(smsBody: string, smsFrom: string, receivedAt: Date = new Date()): ParsedSms | null {
   const body = smsBody.trim();
   if (!body) return null;
 
   const detected = detectBank(smsFrom, body);
   const bank: SmsBank = detected === "unknown" ? "generic" : detected;
-  return buildParsed(body, bank);
+  return buildParsed(body, bank, receivedAt);
 }
