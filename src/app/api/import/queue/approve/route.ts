@@ -1,109 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getAuthenticatedUser, AuthError, toExpense } from "@/lib/auth";
-import { EXPENSE_CATEGORIES, CREDIT_CATEGORIES } from "@/lib/categorizer";
+import { getAuthenticatedUser, AuthError } from "@/lib/auth";
+import { approveImportedTransaction, type ImportOverride } from "@/lib/import-ledger";
 import type { ApiError } from "@/types";
 
-interface Override {
-  category?: string;
-  name?: string;
-}
-
-const EXPENSE_SET = new Set<string>(EXPENSE_CATEGORIES);
-const CREDIT_SET = new Set<string>(CREDIT_CATEGORIES);
-
-/**
- * POST /api/import/queue/approve
- *
- * Approves selected ImportQueue items and creates Expense records.
- * If a category override is provided (user changed it), saves a MerchantRule.
- *
- * Body: { ids: string[], overrides?: Record<string, Override> }
+/** POST /api/import/queue/approve
+ * { ids: string[], overrides?: Record<string, { category?: string; name?: string }> }
  */
 export async function POST(req: NextRequest) {
   try {
     const { id: userId } = await getAuthenticatedUser();
-
-    const body = (await req.json()) as {
-      ids: string[];
-      overrides?: Record<string, Override>;
-    };
-    const { ids, overrides = {} } = body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json<ApiError>(
-        { error: "ids must be a non-empty array." },
-        { status: 400 },
-      );
+    const payload: unknown = await req.json();
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return NextResponse.json<ApiError>({ error: "Invalid payload." }, { status: 400 });
     }
 
-    const queueItems = await db.importQueue.findMany({
-      where: { userId, id: { in: ids }, status: "pending" },
-    });
+    const body = payload as { ids?: unknown; overrides?: unknown };
+    if (
+      !Array.isArray(body.ids) ||
+      body.ids.length === 0 ||
+      body.ids.length > 100 ||
+      body.ids.some((id: unknown) => typeof id !== "string" || id.length > 100)
+    ) {
+      return NextResponse.json<ApiError>({ error: "ids must contain 1 to 100 strings." }, { status: 400 });
+    }
 
-    const created: string[] = [];
+    const overrides = body.overrides && typeof body.overrides === "object" && !Array.isArray(body.overrides)
+      ? body.overrides as Record<string, ImportOverride>
+      : {};
 
-    // Whole batch succeeds or nothing is written — previously a mid-batch
-    // failure left some rows approved and the rest pending.
-    await db.$transaction(async (tx) => {
-      for (const item of queueItems) {
-        const override = overrides[item.id] ?? {};
-        const validCategories = item.txnType === "credit" ? CREDIT_SET : EXPENSE_SET;
-        const requestedCategory = override.category ?? item.suggestedCat;
-        const finalCategory = validCategories.has(requestedCategory)
-          ? requestedCategory
-          : "Other";
-        const finalName = override.name ?? item.merchant ?? item.suggestedCat;
-
-        // ── Auto-provision the month row ──────────────────────────────
-        const monthId = item.date.slice(0, 7); // "YYYY-MM"
-        let month = await tx.month.findUnique({
-          where: { userId_monthId: { userId, monthId } },
-        });
-        if (!month) {
-          month = await tx.month.create({ data: { userId, monthId, income: 0 } });
-        }
-
-        // ── Create the Expense ────────────────────────────────────────
-        const expense = await tx.expense.create({
-          data: {
-            monthId: month.id,
-            amount: item.amount,
-            category: finalCategory,
-            description: item.vpa ?? item.merchant ?? undefined,
-            name: finalName,
-            date: item.date,
-            type: item.txnType,
-          },
-        });
-
-        // ── Mark queue item approved ──────────────────────────────────
-        await tx.importQueue.update({
-          where: { id: item.id },
-          data: { status: "approved", expenseId: expense.id },
-        });
-
-        // ── Learn from override: save MerchantRule ────────────────────
-        if (
-          override.category &&
-          override.category !== item.suggestedCat &&
-          validCategories.has(override.category)
-        ) {
-          const pattern = item.vpa
-            ? item.vpa.split("@")[0].toLowerCase().replace(/\d+$/, "")
-            : (item.merchant ?? "").toLowerCase();
-
-          if (pattern) {
-            await tx.merchantRule.upsert({
-              where: { userId_pattern: { userId, pattern } },
-              update: { category: override.category },
-              create: { userId, pattern, category: override.category },
-            });
-          }
-        }
-
-        created.push(toExpense(expense).id);
+    const ids = [...new Set(body.ids as string[])];
+    const created = await db.$transaction(async (tx) => {
+      const items = await tx.importQueue.findMany({
+        where: { userId, id: { in: ids }, status: "pending" },
+      });
+      const expenseIds: string[] = [];
+      for (const item of items) {
+        const id = await approveImportedTransaction(tx, item, userId, overrides[item.id], true);
+        if (id) expenseIds.push(id);
       }
+      return expenseIds;
     });
 
     return NextResponse.json({ approved: created.length, expenseIds: created });

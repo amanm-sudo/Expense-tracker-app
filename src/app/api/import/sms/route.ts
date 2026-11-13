@@ -1,159 +1,140 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { createHash } from "crypto";
 import { db } from "@/lib/db";
-import { parseSms, type ParsedSms } from "@/lib/sms-parser";
+import { parseSms } from "@/lib/sms-parser";
 import { categorize } from "@/lib/categorizer";
-import type { ApiError } from "@/types";
+import { buildImportDedupeKey } from "@/lib/import-dedupe";
+import { decideAutoImport } from "@/lib/import-policy";
+import { approveImportedTransaction } from "@/lib/import-ledger";
 
-const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
-
-/**
- * Stable fallback key so a re-forwarded SMS is not queued twice when the bank
- * message carries no UPI reference. The short time window keeps two genuinely
- * identical payments (same amount/merchant/day) from being merged later in the day.
- */
-function buildDedupeKey(userId: string, parsed: ParsedSms): string {
-  return createHash("sha256")
-    .update(
-      [
-        userId,
-        parsed.amount.toFixed(2),
-        parsed.date,
-        parsed.txnType,
-        (parsed.vpa ?? parsed.merchant ?? "").toLowerCase(),
-        parsed.upiRef ?? "",
-      ].join("|"),
-    )
-    .digest("hex");
-}
+export const runtime = "nodejs";
+const MAX_REQUEST_BYTES = 8 * 1024;
+const MAX_SMS_LENGTH = 4000;
 
 /**
  * POST /api/import/sms
+ * X-Import-Secret: <token> (never put secrets in URLs)
+ * JSON: { "from": "CANBNK", "body": "...", "timestamp": "2026-11-13T20:30:00+05:30" }
  *
- * Webhook endpoint called by the Android SMS forwarder app.
- * Authenticates via the X-Import-Secret header, or a ?secret= query parameter
- * (easier to paste into forwarder apps that do not support custom headers).
- *
- * Expected body:
- * { "from": "CANBNK", "body": "<full SMS text>", "timestamp": "2026-11-04T20:30:00Z" }
+ * 200: accepted/duplicate/unrecognized. 4xx: invalid payload/auth.
+ * 5xx: transient server failure, so the forwarder can retry.
  */
 export async function POST(req: NextRequest) {
   try {
-    // ── 1. Authenticate via token ────────────────────────────────────
-    const secret =
-      req.headers.get("x-import-secret") ??
-      req.nextUrl.searchParams.get("secret");
-
-    if (!secret) {
-      return NextResponse.json<ApiError>(
-        { error: "Missing import secret. Send X-Import-Secret or ?secret=." },
-        { status: 401 },
-      );
+    const secret = req.headers.get("x-import-secret");
+    if (!secret || secret.length > 150) {
+      return NextResponse.json({ error: "Invalid import credentials." }, { status: 401 });
     }
-
     const tokenRecord = await db.importToken.findUnique({
       where: { token: secret },
-      include: { user: true },
+      select: { userId: true, user: { select: { importMode: true } } },
     });
-
     if (!tokenRecord) {
-      return NextResponse.json<ApiError>(
-        { error: "Invalid import secret." },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Invalid import credentials." }, { status: 401 });
     }
 
-    const userId = tokenRecord.userId;
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_REQUEST_BYTES) {
+      return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+    }
+    const rawBody = await req.text();
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_REQUEST_BYTES) {
+      return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+    }
 
-    // ── 2. Parse request body ────────────────────────────────────────
-    let body: { from?: string; body?: string; timestamp?: string };
+    let payload: unknown;
     try {
-      body = await req.json();
+      payload = JSON.parse(rawBody);
     } catch {
-      return NextResponse.json<ApiError>(
-        { error: "Invalid JSON body." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return NextResponse.json({ error: "Expected a JSON object." }, { status: 400 });
     }
 
-    const smsFrom = (body.from ?? "").trim();
-    const smsBody = (body.body ?? "").trim();
-
-    if (!smsBody) {
-      return NextResponse.json<ApiError>(
-        { error: "Missing SMS body." },
-        { status: 400 },
-      );
+    const data = payload as Record<string, unknown>;
+    if (typeof data.from !== "string" || typeof data.body !== "string") {
+      return NextResponse.json({ error: "Both from and body must be strings." }, { status: 400 });
+    }
+    const smsFrom = data.from.trim().slice(0, 80);
+    const smsBody = data.body.trim();
+    if (!smsBody || smsBody.length > MAX_SMS_LENGTH) {
+      return NextResponse.json({ error: "Invalid SMS length." }, { status: 400 });
     }
 
-    // ── 3. Parse the SMS ─────────────────────────────────────────────
-    const parsed = parseSms(smsBody, smsFrom);
-
-    if (!parsed) {
-      // Not a recognisable transaction alert — log the wording so unsupported
-      // bank formats can be extended, then return 200 so the forwarder
-      // does not retry forever.
-      console.warn(
-        "[import/sms] unrecognised",
-        smsFrom || "(no sender)",
-        smsBody.slice(0, 160),
-      );
-      return NextResponse.json({ received: true, queued: false, reason: "unrecognised" });
+    let receivedAt = new Date();
+    let forwardedTimestamp: string | undefined;
+    if (data.timestamp !== undefined) {
+      if (typeof data.timestamp !== "string" || data.timestamp.length > 50) {
+        return NextResponse.json({ error: "Invalid timestamp." }, { status: 400 });
+      }
+      const parsedTimestamp = new Date(data.timestamp);
+      if (!Number.isFinite(parsedTimestamp.getTime()) || !/(?:Z|[+-]\d{2}:\d{2})$/i.test(data.timestamp)) {
+        return NextResponse.json({ error: "Timestamp must be ISO 8601 with timezone." }, { status: 400 });
+      }
+      receivedAt = parsedTimestamp;
+      forwardedTimestamp = parsedTimestamp.toISOString();
     }
 
-    // ── 4. Deduplicate: same UPI ref, or the same fallback key recently ──
-    const dedupeKey = buildDedupeKey(userId, parsed);
-    const orFilters: Prisma.ImportQueueWhereInput[] = [];
-    if (parsed.upiRef) orFilters.push({ upiRef: parsed.upiRef });
-    orFilters.push({
-      dedupeKey,
-      createdAt: { gte: new Date(Date.now() - DEDUPE_WINDOW_MS) },
-    });
+    const parsed = parseSms(smsBody, smsFrom, receivedAt);
+    if (!parsed) return NextResponse.json({ received: true, queued: false, reason: "unrecognized" });
 
-    const existing = await db.importQueue.findFirst({
-      where: { userId, OR: orFilters },
-    });
-    if (existing) {
-      return NextResponse.json({ received: true, queued: false, reason: "duplicate" });
-    }
-
-    // ── 5. Auto-categorize ───────────────────────────────────────────
-    const catResult = await categorize(
-      userId,
-      parsed.vpa,
-      parsed.merchant,
-      parsed.txnType,
-      smsBody,
+    const category = await categorize(
+      tokenRecord.userId, parsed.vpa, parsed.merchant, parsed.txnType, smsBody,
+    );
+    const confidence = Math.round(parsed.confidence * category.confidence * 100) / 100;
+    const mode = tokenRecord.user.importMode === "trusted" ? "trusted" : "review";
+    const decision = decideAutoImport(parsed, smsFrom, smsBody, category, mode);
+    const dedupeKey = buildImportDedupeKey(
+      tokenRecord.userId, parsed, smsFrom, smsBody, forwardedTimestamp,
     );
 
-    // Combined confidence: parse confidence × categorisation confidence
-    const combinedConfidence =
-      Math.round(parsed.confidence * catResult.confidence * 100) / 100;
+    try {
+      const result = await db.$transaction(async (tx) => {
+        const item = await tx.importQueue.create({
+          data: {
+            userId: tokenRecord.userId,
+            rawSms: smsBody.replace(
+              /((?:a\/c|acct|account)\s*(?:no\.?)?\s*[:.-]?\s*)(\d{8,19})/gi,
+              (_whole, prefix: string, number: string) => prefix + "****" + number.slice(-4),
+            ),
+            smsFrom,
+            amount: parsed.amount,
+            merchant: parsed.merchant,
+            vpa: parsed.vpa,
+            upiRef: parsed.upiRef,
+            dedupeKey,
+            date: parsed.date,
+            txnType: parsed.txnType,
+            suggestedCat: category.category,
+            confidence,
+            status: "pending",
+          },
+        });
 
-    // ── 6. Insert into ImportQueue ───────────────────────────────────
-    await db.importQueue.create({
-      data: {
-        userId,
-        rawSms: smsBody,
-        smsFrom,
-        amount: parsed.amount,
-        merchant: parsed.merchant,
-        vpa: parsed.vpa,
-        upiRef: parsed.upiRef,
-        dedupeKey,
-        date: parsed.date,
-        txnType: parsed.txnType,
-        suggestedCat: catResult.category,
-        confidence: combinedConfidence,
-        status: "pending",
-      },
-    });
+        if (decision.autoApprove) {
+          const expenseId = await approveImportedTransaction(tx, item, tokenRecord.userId);
+          if (!expenseId) throw new Error("Failed to claim new imported transaction.");
+          return { received: true, queued: false, recorded: true, reason: decision.reason };
+        }
 
-    return NextResponse.json({ received: true, queued: true });
-  } catch (err) {
-    console.error("[import/sms] error:", err);
-    // Return 200 to prevent SMS forwarder retry storms
-    return NextResponse.json({ received: true, queued: false, reason: "internal_error" });
+        return { received: true, queued: true, recorded: false, reason: decision.reason };
+      });
+
+      return NextResponse.json(result);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return NextResponse.json({
+          received: true, queued: false, recorded: false, reason: "duplicate",
+        });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("[import/sms] ingestion failed", error instanceof Error ? error.name : "unknown");
+    return NextResponse.json(
+      { error: "Import temporarily unavailable; retry the SMS delivery." },
+      { status: 503 },
+    );
   }
 }
