@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import ZAI from "z-ai-web-dev-sdk";
+import { getGeminiModel } from "@/lib/gemini";
 import { db } from "@/lib/db";
 import {
   getAuthenticatedUser,
@@ -21,11 +21,9 @@ const SYSTEM_PROMPT =
 /** Build a graceful fallback note when AI is unavailable. */
 function buildFallbackNote(monthLabel: string, totalSpend: number, userName?: string | null): AiInsightsResponse {
   const note: AIPersonalNote = {
-    greeting: `Dear ${userName || 'Friend'},`,
+    greeting: `Dear ${userName || "Friend"},`,
     bodyParagraphs: [
-      `As I reviewed your journal for ${monthLabel}, I noticed your recorded spending totalled $${totalSpend.toFixed(
-        2,
-      )}.`,
+      `As I reviewed your journal for ${monthLabel}, I noticed your recorded spending totalled ₹${totalSpend.toFixed(2)}.`,
       "While the details of each transaction remain private, the patterns you've begun tracking here are already a meaningful act of intentionality.",
       totalSpend > 0
         ? "Consider which categories felt most aligned with your values, and which you might gently adjust in the weeks ahead."
@@ -61,15 +59,12 @@ function parseAiResponse(raw: string): AiInsightsResponse | null {
         Array.isArray(parsed.suggestions)
       ) {
         const note: AIPersonalNote = {
-          greeting: String(parsed.note.greeting ?? "Dear Alex,"),
+          greeting: String(parsed.note.greeting ?? "Dear Friend,"),
           bodyParagraphs: parsed.note.bodyParagraphs.map(String),
           closing: String(parsed.note.closing ?? "With care,"),
           signature: String(parsed.note.signature ?? "Your Wealth Journal"),
         };
-        return {
-          note,
-          suggestions: parsed.suggestions.map(String),
-        };
+        return { note, suggestions: parsed.suggestions.map(String) };
       }
     } catch {
       /* fall through */
@@ -142,28 +137,20 @@ export async function POST(req: NextRequest) {
 
     const categorySums: Record<string, number> = {};
     for (const e of currentExpenses) {
-      categorySums[e.category] =
-        (categorySums[e.category] ?? 0) + e.amount;
+      categorySums[e.category] = (categorySums[e.category] ?? 0) + e.amount;
     }
 
-    const sortedCats = Object.entries(categorySums).sort(
-      (a, b) => b[1] - a[1],
-    );
+    const sortedCats = Object.entries(categorySums).sort((a, b) => b[1] - a[1]);
     const highestCategory = sortedCats[0]
       ? { name: sortedCats[0][0], amount: sortedCats[0][1] }
       : null;
     const lowestCategory = sortedCats[sortedCats.length - 1]
-      ? {
-          name: sortedCats[sortedCats.length - 1][0],
-          amount: sortedCats[sortedCats.length - 1][1],
-        }
+      ? { name: sortedCats[sortedCats.length - 1][0], amount: sortedCats[sortedCats.length - 1][1] }
       : null;
 
     let percentChangeFromLastMonth: number;
     if (prevTotal > 0) {
-      percentChangeFromLastMonth = Math.round(
-        ((currentTotal - prevTotal) / prevTotal) * 100,
-      );
+      percentChangeFromLastMonth = Math.round(((currentTotal - prevTotal) / prevTotal) * 100);
     } else if (currentTotal > 0) {
       percentChangeFromLastMonth = 100;
     } else {
@@ -183,26 +170,18 @@ export async function POST(req: NextRequest) {
       monthIncome: month.income,
     };
 
-    // ── Call ZAI ─────────────────────────────────────────────────────
+    // ── Call Gemini ───────────────────────────────────────────────────
     let aiResult: AiInsightsResponse | null = null;
     try {
-      const zai = await ZAI.create();
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: JSON.stringify(aggregated),
-          },
-        ],
-        thinking: { type: "disabled" },
-      });
-
-      const rawContent: string =
-        completion?.choices?.[0]?.message?.content ?? "";
+      const model = getGeminiModel();
+      const result = await model.generateContent([
+        { text: SYSTEM_PROMPT },
+        { text: JSON.stringify(aggregated) },
+      ]);
+      const rawContent = result.response.text() ?? "";
       aiResult = parseAiResponse(rawContent);
     } catch (aiErr) {
-      console.error("[ai-insights] ZAI call failed:", aiErr);
+      console.error("[ai-insights] Gemini call failed:", aiErr);
     }
 
     if (!aiResult) {
@@ -226,9 +205,7 @@ export async function POST(req: NextRequest) {
         typeof monthId === "string" && isValidMonthId(monthId)
           ? formatMonthLabel(monthId)
           : "this month";
-      return NextResponse.json(buildFallbackNote(monthLabel, 0), {
-        status: 200,
-      });
+      return NextResponse.json(buildFallbackNote(monthLabel, 0), { status: 200 });
     } catch {
       return NextResponse.json<ApiError>(
         { error: "Failed to generate AI insights." },

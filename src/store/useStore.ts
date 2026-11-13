@@ -16,6 +16,10 @@ import type {
   AiInsightsResponse,
   MonthId,
   EntryType,
+  ImportQueueItem,
+  ImportQueueResponse,
+  ImportTokenResponse,
+  ApprovePayload,
 } from '@/types';
 
 // ─── Month label ⇄ monthId helpers ──────────────────────────────────
@@ -291,11 +295,25 @@ interface AppState {
   onFetchSummary: (month: string, year: number) => Promise<void>;
   refreshAll: () => Promise<void>;
   setIncome: (income: number) => Promise<void>;
+
+  // ─── UPI Import ───────────────────────────────────────────────────
+  importQueue: ImportQueueItem[];
+  importPendingCount: number;
+  importToken: ImportTokenResponse | null;
+  fetchImportQueue: () => Promise<void>;
+  fetchImportToken: () => Promise<void>;
+  regenerateImportToken: () => Promise<void>;
+  approveImportItems: (ids: string[], overrides?: Record<string, { category?: string; name?: string }>) => Promise<void>;
+  rejectImportItems: (ids: string[]) => Promise<void>;
+  startImportPolling: () => void;
+  stopImportPolling: () => void;
 }
 
 // ─── Helper ─────────────────────────────────────────────────────────
 
 let toastIdCounter = 0;
+let importPollTimer: ReturnType<typeof setInterval> | null = null;
+const IMPORT_POLL_MS = 60_000;
 
 // ─── Store ──────────────────────────────────────────────────────────
 
@@ -673,6 +691,7 @@ export const useStore = create<AppState>((set, get) => ({
       onFetchAnalytics(selectedMonth, year),
       onFetchRecurring(),
       onFetchSummary(selectedMonth, year),
+      get().fetchImportQueue(),
     ]);
   },
 
@@ -695,6 +714,107 @@ export const useStore = create<AppState>((set, get) => ({
       get().addToast('Income updated', 'success');
     } catch {
       get().addToast('Failed to update income', 'error');
+    }
+  },
+
+  // ─── UPI Import state & actions ─────────────────────────────────
+  importQueue: [],
+  importPendingCount: 0,
+  importToken: null,
+
+  fetchImportQueue: async () => {
+    try {
+      const res = await fetch('/api/import/queue?status=pending');
+      if (!res.ok) return;
+      const data = (await res.json()) as ImportQueueResponse;
+      set({ importQueue: data.items, importPendingCount: data.pendingCount });
+    } catch (err) {
+      console.error('[fetchImportQueue] failed:', err);
+    }
+  },
+
+  fetchImportToken: async () => {
+    try {
+      const res = await fetch('/api/import/token');
+      if (!res.ok) return;
+      const data = (await res.json()) as ImportTokenResponse;
+      set({ importToken: data });
+    } catch (err) {
+      console.error('[fetchImportToken] failed:', err);
+    }
+  },
+
+  regenerateImportToken: async () => {
+    try {
+      const res = await fetch('/api/import/token', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to regenerate');
+      const data = (await res.json()) as ImportTokenResponse;
+      set({ importToken: data });
+      get().addToast('Secret token regenerated', 'success');
+    } catch {
+      get().addToast('Failed to regenerate token', 'error');
+    }
+  },
+
+  approveImportItems: async (ids, overrides) => {
+    try {
+      const res = await fetch('/api/import/queue/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, overrides } as ApprovePayload),
+      });
+      if (!res.ok) throw new Error('Failed to approve');
+      const data = await res.json();
+      set((state) => ({
+        importQueue: state.importQueue.filter((item) => !ids.includes(item.id)),
+        importPendingCount: Math.max(0, state.importPendingCount - ids.length),
+      }));
+      get().addToast(
+        `${data.approved} transaction${data.approved !== 1 ? 's' : ''} added to journal`,
+        'success',
+      );
+      // Refresh dashboard balance after approval
+      const { selectedMonth, onFetchMonthData } = get();
+      const match = selectedMonth.match(/^(\w+)\s+(\d{4})$/);
+      const year = match ? parseInt(match[2], 10) : new Date().getFullYear();
+      await onFetchMonthData(selectedMonth, year);
+    } catch {
+      get().addToast('Failed to approve transactions', 'error');
+    }
+  },
+
+  rejectImportItems: async (ids) => {
+    try {
+      const res = await fetch('/api/import/queue/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error('Failed to reject');
+      set((state) => ({
+        importQueue: state.importQueue.filter((item) => !ids.includes(item.id)),
+        importPendingCount: Math.max(0, state.importPendingCount - ids.length),
+      }));
+      get().addToast('Transactions dismissed', 'success');
+    } catch {
+      get().addToast('Failed to dismiss transactions', 'error');
+    }
+  },
+
+  startImportPolling: () => {
+    if (importPollTimer || typeof window === 'undefined') return;
+    importPollTimer = setInterval(() => {
+      // Only poll while the tab is actually visible.
+      if (document.visibilityState === 'visible') {
+        void get().fetchImportQueue();
+      }
+    }, IMPORT_POLL_MS);
+  },
+
+  stopImportPolling: () => {
+    if (importPollTimer) {
+      clearInterval(importPollTimer);
+      importPollTimer = null;
     }
   },
 }));

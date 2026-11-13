@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -19,7 +19,59 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  months Month[]
+  months        Month[]
+  importToken   ImportToken?
+  importQueue   ImportQueue[]
+  merchantRules MerchantRule[]
+}
+
+/// Secret token used to authenticate the SMS forwarder webhook.
+model ImportToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  token     String   @unique @default(cuid())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A UPI SMS that has been parsed and is awaiting user review.
+model ImportQueue {
+  id           String   @id @default(cuid())
+  userId       String
+  rawSms       String               // original SMS text
+  smsFrom      String               // sender ID e.g. "CANBNK", "UBIBNK"
+  amount       Float
+  merchant     String?              // resolved merchant name
+  vpa          String?              // UPI VPA e.g. "zomato@okaxis"
+  upiRef       String?              // UPI reference number
+  dedupeKey    String?              // stable hash fallback when upiRef is absent
+  date         String               // ISO "YYYY-MM-DD"
+  txnType      String  @default("expense") // "expense" | "credit"
+  suggestedCat String               // auto-suggested category
+  confidence   Float   @default(0)  // 0–1 parse × categorization confidence
+  status       String  @default("pending") // "pending" | "approved" | "rejected"
+  expenseId    String?              // set after approval → linked Expense id
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, dedupeKey])
+}
+
+/// User-taught merchant → category mapping (learned from review corrections).
+model MerchantRule {
+  id        String   @id @default(cuid())
+  userId    String
+  pattern   String               // VPA prefix or keyword e.g. "zomato"
+  category  String               // mapped ExpenseCategory
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pattern])
+  @@index([userId])
 }
 
 /// A monthly ledger. `monthId` is the "YYYY-MM" key (e.g. "2026-06").

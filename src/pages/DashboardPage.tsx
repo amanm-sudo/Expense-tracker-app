@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 import {
   Coffee, Home, ShoppingBag, Receipt, Plus, Trash2, Pencil,
   Banknote, Laptop, Gift, RotateCcw, TrendingUp, Award, CircleDollarSign,
-  Bus, Music, Heart, UtensilsCrossed, Globe, Monitor, Dumbbell,
+  Bus, Music, Heart, UtensilsCrossed, Globe, Monitor, Dumbbell, Smartphone,
 } from 'lucide-react';
 import TopBar from '@/components/layout/TopBar';
 import AllExpensesModal from '@/components/shared/AllExpensesModal';
@@ -18,7 +18,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function DashboardPage() {
-  const { dashboard, openAddExpense, addToast, deleteExpense, openEditExpense } = useStore();
+  const { dashboard, openAddExpense, addToast, deleteExpense, openEditExpense, importPendingCount, setCurrentPage } = useStore();
   const [showAllExpenses, setShowAllExpenses] = useState(false);
 
   return (
@@ -26,6 +26,21 @@ export default function DashboardPage() {
       <TopBar pageTitle="Financial Journal" />
 
       <div className="px-4 md:px-8 pb-10 flex-1 flex flex-col">
+        {/* UPI pending transactions banner */}
+        {importPendingCount > 0 && (
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded px-4 py-3 mb-4 animate-slide-up">
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Smartphone size={16} className="flex-shrink-0" />
+              <span><strong>{importPendingCount}</strong> UPI transaction{importPendingCount !== 1 ? 's' : ''} waiting for review</span>
+            </div>
+            <button
+              onClick={() => setCurrentPage('import-review')}
+              className="text-xs font-semibold text-amber-700 hover:underline whitespace-nowrap ml-4"
+            >
+              Review Now ?
+            </button>
+          </div>
+        )}
         {/* Top row: Balance summary + Insight */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-10">
           {/* Balance Summary Card */}

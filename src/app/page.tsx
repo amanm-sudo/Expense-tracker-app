@@ -12,11 +12,15 @@ import AnalyticsPage from '@/pages/AnalyticsPage';
 import SummaryPage from '@/pages/SummaryPage';
 import RecurringPage from '@/pages/RecurringPage';
 import SettingsPage from '@/pages/SettingsPage';
+import ImportReviewPage from '@/pages/ImportReviewPage';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { currentPage, refreshAll, setUserProfile } = useStore();
+  const {
+    currentPage, refreshAll, setUserProfile,
+    startImportPolling, stopImportPolling,
+  } = useStore();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -35,12 +39,14 @@ export default function Home() {
     }
   }, [session, setUserProfile]);
 
-  // Fetch all data on mount so the UI hydrates from the backend
+  // Fetch all data on mount and poll the import queue while signed in
   useEffect(() => {
     if (status === 'authenticated') {
       refreshAll();
+      startImportPolling();
+      return () => stopImportPolling();
     }
-  }, [status, refreshAll]);
+  }, [status, refreshAll, startImportPolling, stopImportPolling]);
 
   // Show loading spinner while session is loading
   if (status === 'loading' || status === 'unauthenticated') {
@@ -66,6 +72,8 @@ export default function Home() {
         return <RecurringPage />;
       case 'settings':
         return <SettingsPage />;
+      case 'import-review':
+        return <ImportReviewPage />;
       default:
         return <DashboardPage />;
     }

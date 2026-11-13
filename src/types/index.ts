@@ -159,7 +159,48 @@ export type PageView =
   | 'analytics'
   | 'recurring'
   | 'summary'
-  | 'settings';
+  | 'settings'
+  | 'import-review';
+
+// ─── UPI Import ──────────────────────────────────────────────────────────────
+
+export type ImportStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ImportQueueItem {
+  id: string;
+  rawSms: string;
+  smsFrom: string;
+  amount: number;
+  merchant: string | null;
+  vpa: string | null;
+  upiRef: string | null;
+  dedupeKey?: string | null;
+  date: string;
+  txnType: EntryType;
+  suggestedCat: string;
+  confidence: number;
+  status: ImportStatus;
+  createdAt: string;
+}
+
+export interface ImportQueueResponse {
+  items: ImportQueueItem[];
+  pendingCount: number;
+}
+
+export interface ImportTokenResponse {
+  masked: string;
+  /** Full secret — only ever returned to the authenticated owner. */
+  token: string;
+  webhookUrl: string;
+  createdAt: string;
+  regenerated?: boolean;
+}
+
+export interface ApprovePayload {
+  ids: string[];
+  overrides?: Record<string, { category?: string; name?: string }>;
+}
 
 export interface Toast {
   id: string;

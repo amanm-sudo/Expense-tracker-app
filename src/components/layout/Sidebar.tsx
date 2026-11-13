@@ -1,15 +1,16 @@
 'use client';
 
-import { LayoutGrid, TrendingUp, Calendar, Settings, BookOpen, Plus, Menu, X } from 'lucide-react';
+import { LayoutGrid, TrendingUp, Calendar, Settings, BookOpen, Plus, Menu, X, Smartphone } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { PageView } from '@/types';
 import { useState, useEffect } from 'react';
 
-const navItems: { label: string; icon: React.ElementType; page: PageView }[] = [
+const navItems: { label: string; icon: React.ElementType; page: PageView; badgeKey?: string }[] = [
   { label: 'Dashboard', icon: LayoutGrid, page: 'dashboard' },
   { label: 'Analytics', icon: TrendingUp, page: 'analytics' },
   { label: 'Recurring', icon: Calendar, page: 'recurring' },
   { label: 'Summary', icon: BookOpen, page: 'summary' },
+  { label: 'Import', icon: Smartphone, page: 'import-review', badgeKey: 'importPendingCount' },
   { label: 'Settings', icon: Settings, page: 'settings' },
 ];
 
@@ -30,7 +31,7 @@ function getInitials(name: string): string {
 }
 
 export default function Sidebar() {
-  const { currentPage, setCurrentPage, openAddExpense, userName } = useStore();
+  const { currentPage, setCurrentPage, openAddExpense, userName, importPendingCount } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -105,6 +106,8 @@ export default function Sidebar() {
           {navItems.map((item) => {
             const isActive = currentPage === item.page;
             const Icon = item.icon;
+            const badge = item.badgeKey === 'importPendingCount' ? importPendingCount : 0;
+
             return (
               <button
                 key={item.page}
@@ -117,9 +120,25 @@ export default function Sidebar() {
                   }
                 `}
               >
-                <Icon size={20} strokeWidth={1.5} />
+                <div className="relative flex-shrink-0">
+                  <Icon size={20} strokeWidth={1.5} />
+                  {/* Badge on icon (collapsed mode) */}
+                  {collapsed && badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-terracotta text-white
+                      text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {badge > 9 ? '9+' : badge}
+                    </span>
+                  )}
+                </div>
                 {!collapsed && (
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
+                )}
+                {/* Badge on label (expanded mode) */}
+                {!collapsed && badge > 0 && (
+                  <span className="ml-auto text-[10px] font-bold bg-terracotta text-white
+                    rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
                 )}
               </button>
             );
