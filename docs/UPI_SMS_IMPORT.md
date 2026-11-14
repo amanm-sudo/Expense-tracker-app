@@ -54,19 +54,47 @@ These values are illustrative. Never forward OTP messages. Avoid query-parameter
 Actual forwarder payload format, sender IDs and production DB connection must be verified on the phone and hosting provider. This PR does not create a bank integration or direct UPI API connection.
 
 
-## Connect to Neon PostgreSQL (Prisma 6)
+## Connect to your Neon PostgreSQL project (Prisma 6)
 
-This app uses Prisma 6 and requires two private environment variables:
+This project is linked to Neon project `broad-snow-47960761` in
+organization `org-proud-glade-28209496`. PostgreSQL connection
+credentials must stay out of public GitHub history.
 
-- `DATABASE_URL`: **pooled** Neon connection URL (hostname typically contains `-pooler`), for normal serverless requests.
-- `DATABASE_URL_UNPOOLED`: **direct** Neon connection URL, for Prisma migrations and schema updates.
+The app expects these Neon environment variables:
 
-The credentials are **not** stored in GitHub. Open Neon Console → your project → Connect and copy both variants, or run Neon's CLI inside a local repository checkout:
+- `DATABASE_URL` — pooled PostgreSQL URL (Neon hostname contains `-pooler`).
+- `DATABASE_URL_UNPOOLED` — direct PostgreSQL URL (no `-pooler`).
+
+### Fetch credentials privately on your computer
+
+From the repository root, sign into Neon and link the existing project:
 
 ```sh
-npx neon@latest auth
+npx neon@latest login
 npx neon@latest link --project-id broad-snow-47960761 --org-id org-proud-glade-28209496
-npx neon@latest env pull
+npx neon@latest env pull --file .env
 ```
 
-Use `.env.local` / `.env` for local secrets, then set the same pooled and direct URLs as environment variables on Vercel. Run `npx prisma db push` only for a new, empty database. For an existing database, create/review a migration before running `npx prisma migrate deploy`. Do not expose connection strings, passwords or generated SMS tokens in chats, commits, issues or screenshots.
+The link command may automatically pull the variables. The last command
+refreshes them into the local `.env` used by Prisma CLI. Alternatively,
+open Neon Console → project → Connect and copy both URLs, enabling connection
+pooling for `DATABASE_URL` and disabling it for `DATABASE_URL_UNPOOLED`.
+Put them in an untracked local `.env` file. Do not share either password.
+
+Also set `NEXTAUTH_URL=http://localhost:3000` and generate
+`NEXTAUTH_SECRET` locally (e.g. with Node `crypto.randomBytes(32)`).
+
+For a **new, empty database only**, run:
+
+```sh
+npm ci
+npx prisma generate
+npx prisma db push
+npm run test:sms
+npm run build
+```
+
+For established databases, back up and use a reviewed Prisma migration.
+Add both Neon variables securely in Vercel Project → Settings → Environment
+Variables; production also requires `NEXTAUTH_URL` and `NEXTAUTH_SECRET`.
+Do not paste private database URLs into GitHub, the PR, or a chat.
