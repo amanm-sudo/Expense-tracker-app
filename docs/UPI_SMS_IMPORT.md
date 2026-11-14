@@ -52,3 +52,21 @@ These values are illustrative. Never forward OTP messages. Avoid query-parameter
 6. Run \`npm run test:sms\` and \`npm run build\` on your machine/CI before merging.
 
 Actual forwarder payload format, sender IDs and production DB connection must be verified on the phone and hosting provider. This PR does not create a bank integration or direct UPI API connection.
+
+
+## Connect to Neon PostgreSQL (Prisma 6)
+
+This app uses Prisma 6 and requires two private environment variables:
+
+- `DATABASE_URL`: **pooled** Neon connection URL (hostname typically contains `-pooler`), for normal serverless requests.
+- `DATABASE_URL_UNPOOLED`: **direct** Neon connection URL, for Prisma migrations and schema updates.
+
+The credentials are **not** stored in GitHub. Open Neon Console → your project → Connect and copy both variants, or run Neon's CLI inside a local repository checkout:
+
+```sh
+npx neon@latest auth
+npx neon@latest link --project-id broad-snow-47960761 --org-id org-proud-glade-28209496
+npx neon@latest env pull
+```
+
+Use `.env.local` / `.env` for local secrets, then set the same pooled and direct URLs as environment variables on Vercel. Run `npx prisma db push` only for a new, empty database. For an existing database, create/review a migration before running `npx prisma migrate deploy`. Do not expose connection strings, passwords or generated SMS tokens in chats, commits, issues or screenshots.
