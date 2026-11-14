@@ -61,3 +61,5 @@ server.log
 /db/*.db
 /db/*.db-shm
 /db/*.db-wal
+# Neon CLI project context
+.neon
