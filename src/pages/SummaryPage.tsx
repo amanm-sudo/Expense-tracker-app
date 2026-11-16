@@ -57,7 +57,7 @@ export default function SummaryPage() {
           {/* Total Amount Saved */}
           <div className="bg-white border border-gray-border rounded shadow-card-sm p-6 animate-slide-up" style={{ animationDelay: '120ms' }}>
             <div className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.08em] mb-2">
-              Total Amount Saved
+              Net Monthly Cashflow
             </div>
             <div className="font-serif-display text-[28px] text-text-primary mb-4">
               ₹{summary.totalAmountSaved.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
