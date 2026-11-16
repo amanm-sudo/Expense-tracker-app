@@ -223,7 +223,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Date — default to current month label
   selectedMonth: currentMonthLabel(),
-  setSelectedMonth: (month) => set({ selectedMonth: month }),
+  setSelectedMonth: (month) => set({ selectedMonth: month, dataErrors: {} }),
   getSelectedMonthId: () => labelToMonthId(get().selectedMonth),
 
   // Modal
