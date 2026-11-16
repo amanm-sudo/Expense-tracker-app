@@ -42,7 +42,7 @@ function nameToColor(name: string): string {
 }
 
 export default function TopBar({ pageTitle = 'Financial Journal' }: TopBarProps) {
-  const { selectedMonth, setSelectedMonth, refreshAll, setCurrentPage, addToast, userName } = useStore();
+  const { selectedMonth, setSelectedMonth, setCurrentPage, addToast, userName } = useStore();
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -53,7 +53,7 @@ export default function TopBar({ pageTitle = 'Financial Journal' }: TopBarProps)
   const handleSelectMonth = (m: string) => {
     setSelectedMonth(m);
     setMonthDropdownOpen(false);
-    refreshAll();
+    // The selected view fetches only its own month's data on demand.
   };
 
   const handleSignOut = async () => {
