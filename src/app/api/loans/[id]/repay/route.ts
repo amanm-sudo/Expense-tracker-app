@@ -14,7 +14,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const data = body as Record<string, unknown>;
     const amountPaisa = toPaise(data.amount);
-    if (!amountPaisa || !isValidIsoDate(data.repaidDate)) {
+    const repaidDate = data.repaidDate;
+    if (!amountPaisa || !isValidIsoDate(repaidDate)) {
       return NextResponse.json({ error: "Provide positive amount and YYYY-MM-DD repayment date." }, { status: 400 });
     }
     const note = data.note === undefined || data.note === null ? null : data.note;
@@ -30,11 +31,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             where: { id, userId }, include: { repayments: true },
           });
           if (!loan) return { status: 404 as const, message: "Loan not found." };
-          if (data.repaidDate < loan.lentDate) return { status: 400 as const, message: "Repayment cannot precede the lending date." };
+          if (repaidDate < loan.lentDate) return { status: 400 as const, message: "Repayment cannot precede the lending date." };
           const outstanding = loan.principalPaisa - loan.repayments.reduce((sum, r) => sum + r.amountPaisa, 0);
           if (amountPaisa > outstanding) return { status: 409 as const, message: "Repayment exceeds outstanding balance." };
           await tx.loanRepayment.create({
-            data: { loanId: id, amountPaisa, repaidDate: data.repaidDate, note },
+            data: { loanId: id, amountPaisa, repaidDate, note },
           });
           const updated = await tx.loan.findUniqueOrThrow({
             where: { id }, include: { repayments: true },
