@@ -220,6 +220,7 @@ export async function categorize(
   merchant: string | null,
   txnType: "expense" | "credit",
   hintText?: string,
+  allowAi = true,
 ): Promise<CategoryResult> {
   // Credits use their own category list — bank SMS often has no VPA, so the
   // raw message text is the best signal for salary/refund/cashback wording.
@@ -240,6 +241,9 @@ export async function categorize(
   // 2. VPA / keyword lookup
   const kwResult = checkKeywords(vpa, merchant);
   if (kwResult) return kwResult;
+
+  // Webhooks must respond promptly; do not wait for an external AI service.
+  if (!allowAi) return { category: "Other", confidence: 0.4, source: "default" };
 
   // 3. Gemini fallback
   return geminiCategorize(merchant, vpa);

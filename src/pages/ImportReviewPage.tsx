@@ -179,7 +179,7 @@ export default function ImportReviewPage() {
         <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded px-4 py-3 mb-6 text-sm text-blue-800">
           <Info size={16} className="flex-shrink-0 mt-0.5" />
           <span>
-            Categories are auto-detected from your UPI VPA. Edit any before adding to your journal —
+            Categories are suggested from UPI details or bank email payee names. Review each transaction before adding —
             corrections are remembered for future transactions.
           </span>
         </div>
@@ -193,8 +193,8 @@ export default function ImportReviewPage() {
             <Smartphone size={48} className="text-text-muted mb-4" />
             <h3 className="font-serif-display text-xl text-text-primary mb-2">Queue is empty</h3>
             <p className="text-text-secondary text-sm max-w-sm">
-              Once you set up the SMS forwarder on your Android, every UPI payment
-              from Canara Bank or Union Bank of India will appear here automatically.
+              Imported SMS and bank email transaction alerts from Canara Bank or Union Bank of India
+              will appear here for review.
             </p>
           </div>
         ) : (
@@ -265,6 +265,9 @@ export default function ImportReviewPage() {
                             text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
                             Credit
                           </span>
+                        )}
+                        {item.smsFrom.startsWith('EMAIL:') && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide border border-blue-200 bg-blue-50 text-blue-700 rounded px-1.5 py-0.5">Email</span>
                         )}
                         <ConfidenceBadge score={item.confidence} />
                       </div>
