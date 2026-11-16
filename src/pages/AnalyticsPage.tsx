@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
                       cx="50%" cy="48%" outerRadius={90} innerRadius={48} paddingAngle={2}>
                       {analytics.categoryBreakdown.map((item) => <Cell key={item.name} fill={item.color} />)}
                     </Pie>
-                    <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')} />
+                    <Tooltip formatter={(value) => "₹" + Number(value).toLocaleString('en-IN')} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -192,7 +192,7 @@ export default function AnalyticsPage() {
                     interval={4} tick={{ fontSize: 11, fill: '#9B9590' }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={(v: number) => "₹" + v} tick={{ fontSize: 11, fill: '#9B9590' }}
                     axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')}
+                  <Tooltip formatter={(value) => "₹" + Number(value).toLocaleString('en-IN')}
                     labelFormatter={(label: string) => "Day " + String(label).slice(-2)} />
                   <Bar dataKey="amount" fill="#2D3B2D" maxBarSize={24} radius={[3,3,0,0]} />
                 </BarChart>
@@ -210,7 +210,7 @@ export default function AnalyticsPage() {
                 <BarChart data={analytics.incomeVsExpenses} layout="vertical" margin={{ top: 5, right: 18, left: 25, bottom: 5 }}>
                   <XAxis type="number" tickFormatter={(v: number) => "₹" + v} tick={{ fontSize: 11, fill: '#9B9590' }} />
                   <YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 11, fill: '#68625D' }} />
-                  <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')} />
+                  <Tooltip formatter={(value) => "₹" + Number(value).toLocaleString('en-IN')} />
                   <Bar dataKey="amount" fill="#5C6B5C" maxBarSize={32} radius={[0,4,4,0]} />
                 </BarChart>
               </ResponsiveContainer>
