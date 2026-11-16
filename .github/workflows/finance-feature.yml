@@ -1,0 +1,31 @@
+name: Finance analytics and loans checks
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "prisma/schema.prisma"
+      - "package.json"
+      - ".github/workflows/finance-feature.yml"
+  push:
+    branches:
+      - feature/expense-analytics-lending-ledger
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/test_db
+      NEXTAUTH_SECRET: ci-only-placeholder-never-a-production-secret
+      NEXTAUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:sms
+      - run: npm run test:finance
+      - run: npm run build
