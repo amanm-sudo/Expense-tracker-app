@@ -6,6 +6,7 @@ import {
   isValidMonthId,
   toExpense,
 } from "@/lib/auth";
+import { loanMonthSummary } from "@/lib/loans";
 import type {
   MonthDataResponse,
   RecurringObligation,
@@ -92,7 +93,7 @@ export async function GET(
 
     const month = await findOrCreateMonth(userId, monthId);
 
-    const [expenses, emis] = await Promise.all([
+    const [expenses, emis, loans] = await Promise.all([
       db.expense.findMany({
         where: { monthId: month.id },
         orderBy: { date: "desc" },
@@ -101,6 +102,7 @@ export async function GET(
         where: { monthId: month.id },
         orderBy: { dueDate: "asc" },
       }),
+      db.loan.findMany({ where: { userId }, include: { repayments: true } }),
     ]);
 
     const body: MonthDataResponse = {
@@ -108,6 +110,7 @@ export async function GET(
       income: month.income,
       expenses: expenses.map(toExpense),
       emis: emis.map(toRecurringObligation),
+      loanCashflow: loanMonthSummary(loans, monthId),
     };
     return NextResponse.json(body);
   } catch (err) {

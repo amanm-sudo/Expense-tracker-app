@@ -13,6 +13,7 @@ import SummaryPage from '@/pages/SummaryPage';
 import RecurringPage from '@/pages/RecurringPage';
 import SettingsPage from '@/pages/SettingsPage';
 import ImportReviewPage from '@/pages/ImportReviewPage';
+import LoansPage from '@/pages/LoansPage';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -74,6 +75,8 @@ export default function Home() {
         return <SettingsPage />;
       case 'import-review':
         return <ImportReviewPage />;
+      case 'loans':
+        return <LoansPage />;
       default:
         return <DashboardPage />;
     }

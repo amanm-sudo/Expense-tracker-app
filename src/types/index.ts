@@ -48,6 +48,9 @@ export interface DashboardData {
   insightDescription: string;
   insightProgressPercent: number;
   recentExpenses: Expense[];
+  loansOutstanding: number;
+  lentThisMonth: number;
+  repaidThisMonth: number;
 }
 
 // ─── Add Expense Form ───────────────────────────────────────────────
@@ -165,7 +168,8 @@ export type PageView =
   | 'recurring'
   | 'summary'
   | 'settings'
-  | 'import-review';
+  | 'import-review'
+  | 'loans';
 
 // ─── UPI Import ──────────────────────────────────────────────────────────────
 
@@ -224,6 +228,7 @@ export interface MonthDataResponse {
   income: number;
   expenses: Expense[];
   emis: RecurringObligation[];
+  loanCashflow: { lent: number; repaid: number; outstanding: number };
 }
 
 /** Body for POST /api/expenses */

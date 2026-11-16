@@ -107,6 +107,9 @@ const demoDashboard: DashboardData = {
   insightDescription: "You've saved 12% more than last month. Keep the narrative strong.",
   insightProgressPercent: 60,
   recentExpenses: demoRecentExpenses,
+  loansOutstanding: 0,
+  lentThisMonth: 0,
+  repaidThisMonth: 0,
 };
 
 const demoAnalytics: AnalyticsData = {
@@ -585,7 +588,7 @@ export const useStore = create<AppState>((set, get) => ({
         .slice(0, 10);
 
       // Progress percent: ratio of remaining balance to income (clamped 0-100)
-      const remainingBalance = income + totalCredits - totalExpenses;
+      const remainingBalance = income + totalCredits - totalExpenses - data.loanCashflow.lent + data.loanCashflow.repaid;
       const progressPercent = income > 0
         ? Math.max(0, Math.min(100, Math.round((remainingBalance / income) * 100)))
         : 0;
@@ -597,6 +600,9 @@ export const useStore = create<AppState>((set, get) => ({
           incomeThisMonth: income,
           expensesTracked: totalExpenses,
           recentExpenses: recent,
+          loansOutstanding: data.loanCashflow.outstanding,
+          lentThisMonth: data.loanCashflow.lent,
+          repaidThisMonth: data.loanCashflow.repaid,
           insightProgressPercent: progressPercent || state.dashboard.insightProgressPercent,
         },
         loading: { ...state.loading, dashboard: false },
@@ -713,7 +719,7 @@ export const useStore = create<AppState>((set, get) => ({
         dashboard: {
           ...state.dashboard,
           incomeThisMonth: income,
-          remainingBalance: income - state.dashboard.expensesTracked,
+          remainingBalance: state.dashboard.remainingBalance + income - state.dashboard.incomeThisMonth,
         },
       }));
       get().addToast('Income updated', 'success');
