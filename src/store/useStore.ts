@@ -280,6 +280,7 @@ export const useStore = create<AppState>((set, get) => ({
               ? state.dashboard.remainingBalance - amount
               : state.dashboard.remainingBalance + amount,
           },
+          loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
         };
       });
       get().addToast('Entry removed', 'success');
@@ -355,6 +356,7 @@ export const useStore = create<AppState>((set, get) => ({
             : state.dashboard.remainingBalance - newExpense.amount,
           recentExpenses: [newExpense, ...state.dashboard.recentExpenses].slice(0, 10),
         },
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
       }));
 
       get().addToast(
@@ -429,6 +431,7 @@ export const useStore = create<AppState>((set, get) => ({
             ),
           },
           editingExpense: null,
+          loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
         };
       });
 
@@ -491,6 +494,7 @@ export const useStore = create<AppState>((set, get) => ({
         loading: { ...state.loading, dashboard: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchMonthData] failed:', err);
       set((state) => ({
         dataErrors: { ...state.dataErrors, dashboard: 'Unable to load monthly data.' },
@@ -541,6 +545,7 @@ export const useStore = create<AppState>((set, get) => ({
         loading: { ...state.loading, analytics: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchAnalytics] failed:', err);
       set((state) => ({
         dataErrors: { ...state.dataErrors, analytics: 'Unable to load analytics.' },
@@ -564,6 +569,7 @@ export const useStore = create<AppState>((set, get) => ({
         loading: { ...state.loading, recurring: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchRecurring] failed:', err);
       set((state) => ({
         dataErrors: { ...state.dataErrors, recurring: 'Unable to load recurring obligations.' },
@@ -587,6 +593,7 @@ export const useStore = create<AppState>((set, get) => ({
         loading: { ...state.loading, summary: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchSummary] failed:', err);
       set((state) => ({
         dataErrors: { ...state.dataErrors, summary: 'Unable to load monthly summary.' },
@@ -636,6 +643,7 @@ export const useStore = create<AppState>((set, get) => ({
           incomeThisMonth: income,
           remainingBalance: state.dashboard.remainingBalance + income - state.dashboard.incomeThisMonth,
         },
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
       }));
       get().addToast('Income updated', 'success');
     } catch {
@@ -703,6 +711,9 @@ export const useStore = create<AppState>((set, get) => ({
       const { selectedMonth, onFetchMonthData } = get();
       const match = selectedMonth.match(/^(\w+)\s+(\d{4})$/);
       const year = match ? parseInt(match[2], 10) : new Date().getFullYear();
+      set((state) => ({
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
+      }));
       await onFetchMonthData(selectedMonth, year);
     } catch {
       get().addToast('Failed to approve transactions', 'error');
