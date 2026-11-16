@@ -110,6 +110,11 @@ const demoDashboard: DashboardData = {
 };
 
 const demoAnalytics: AnalyticsData = {
+  dailySpending: [],
+  incomeVsExpenses: [],
+  topMerchants: [],
+  totalIncome: 0,
+  transactionCount: 0,
   monthlyNarrative:
     'This month, your financial story reflects a shift towards essential stability, with a notable emphasis on long-term home investments.',
   highestCategory: { name: 'Housing', percentage: 42 },

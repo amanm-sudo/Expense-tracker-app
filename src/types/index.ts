@@ -79,6 +79,11 @@ export interface CategoryBreakdownItem {
 }
 
 export interface AnalyticsData {
+  dailySpending: TrendDataPoint[];
+  incomeVsExpenses: Array<{ name: string; amount: number }>;
+  topMerchants: Array<{ name: string; amount: number }>;
+  totalIncome: number;
+  transactionCount: number;
   monthlyNarrative: string;
   highestCategory: CategoryStat;
   lowestCategory: CategoryStat;
