@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
                     tick={{ fontSize: 11, fill: '#9B9590' }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                    tickFormatter={(value: number) => value < 1000 ? `₹${value}` : `₹${Number((value / 1000).toFixed(1))}k`}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#D5D0C8', strokeWidth: 1, strokeDasharray: '4 4' }} />
                   <Line
