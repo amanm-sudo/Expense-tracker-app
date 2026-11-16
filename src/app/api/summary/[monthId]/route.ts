@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { loanMonthSummary } from "@/lib/loans";
 import {
   getAuthenticatedUser,
   AuthError,
@@ -67,9 +68,13 @@ export async function GET(
         .reduce((s, e) => s + e.amount, 0),
     );
     const income = month.income;
-    // Saved = income + credits received - money spent
-    const totalAmountSaved =
-      income > 0 ? round2(income + totalCredits - totalMonthlySpend) : 0;
+    const loans = await db.loan.findMany({ where: { userId }, include: { repayments: true } });
+    const loanCashflow = loanMonthSummary(loans, monthId);
+    // Cash balance accounts for money lent and returned without mistaking them
+    // for permanent expenses or income.
+    const totalAmountSaved = round2(
+      income + totalCredits - totalMonthlySpend - loanCashflow.lent + loanCashflow.repaid,
+    );
 
     // ── Per-category totals (this month + previous month for trend) ──
     const categoryTotals = new Map<string, number>();
@@ -193,7 +198,7 @@ export async function GET(
           topCategoryName || "essentials"
         }.`,
         totalAmountSaved > 0
-          ? `You saved $${totalAmountSaved.toFixed(
+          ? `You saved ₹${totalAmountSaved.toFixed(
               2,
             )} this month — a quiet but meaningful margin of intentionality worth honouring.`
           : `While savings remained modest this month, every entry you logged is itself a form of clarity that compounds over time.`,
