@@ -35,7 +35,7 @@ export default function SummaryPage() {
             {summary.month} Summary
           </h1>
           <p className="font-quote text-base italic text-text-secondary">
-            Reflecting on thirty-one days of financial intentionality.
+            Reflecting on this month&apos;s financial choices.
           </p>
         </div>
 
