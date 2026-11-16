@@ -1,0 +1,32 @@
+name: Bank email import checks
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/**"
+      - "src/app/api/import/**"
+      - "src/pages/ImportReviewPage.tsx"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/bank-email-import.yml"
+  push:
+    branches:
+      - feature/gmail-bank-email-import
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/sampledb
+      NEXTAUTH_SECRET: ci-placeholder-not-a-real-secret-never-use-in-production
+      NEXTAUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:sms
+      - run: npm run build
