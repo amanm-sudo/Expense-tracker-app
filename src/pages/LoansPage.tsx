@@ -120,15 +120,15 @@ export default function LoansPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
           <div className="bg-sage-dark rounded p-5 text-white">
             <div className="text-white/70 text-xs mb-2">Outstanding — owed to you</div>
-            <div className="font-serif-display text-2xl">{currency(data.totalOutstanding)}</div>
+            <div className="font-serif-display text-2xl">{loading ? '—' : currency(data.totalOutstanding)}</div>
           </div>
           <div className="bg-white border border-gray-border rounded p-5">
             <div className="text-text-muted text-xs mb-2">Total lent</div>
-            <div className="font-serif-display text-2xl text-text-primary">{currency(data.totalLent)}</div>
+            <div className="font-serif-display text-2xl text-text-primary">{loading ? '—' : currency(data.totalLent)}</div>
           </div>
           <div className="bg-white border border-gray-border rounded p-5">
             <div className="text-text-muted text-xs mb-2">Total repaid</div>
-            <div className="font-serif-display text-2xl text-emerald-700">{currency(totalRepaid)}</div>
+            <div className="font-serif-display text-2xl text-emerald-700">{loading ? '—' : currency(totalRepaid)}</div>
           </div>
         </div>
 
