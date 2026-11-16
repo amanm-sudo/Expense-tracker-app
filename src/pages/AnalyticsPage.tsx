@@ -6,6 +6,11 @@ import TopBar from '@/components/layout/TopBar';
 import {
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -139,6 +144,93 @@ export default function AnalyticsPage() {
               <span>{analytics.percentChangeFromLastMonth}% from last month</span>
             </div>
           </div>
+        </div>
+
+
+        {/* Charts use the expense-only totals from the server. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
+          <section className="bg-white border border-gray-border rounded shadow-card-sm p-5 md:p-6">
+            <h3 className="font-serif-display text-xl text-text-primary mb-1">Where your money went</h3>
+            <p className="text-xs text-text-secondary mb-4">Expense categories (excluding incoming credits).</p>
+            {analytics.categoryBreakdown.length === 0 ? (
+              <div className="h-[230px] flex items-center justify-center text-sm text-text-muted">No expenses this month.</div>
+            ) : (
+              <div className="h-[230px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={analytics.categoryBreakdown} dataKey="amount" nameKey="name"
+                      cx="50%" cy="48%" outerRadius={90} innerRadius={48} paddingAngle={2}>
+                      {analytics.categoryBreakdown.map((item) => <Cell key={item.name} fill={item.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            <div className="space-y-2">
+              {analytics.categoryBreakdown.map((item) => (
+                <div key={item.name} className="flex items-center justify-between text-xs gap-3">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="truncate text-text-secondary">{item.name}</span>
+                  </span>
+                  <span className="font-semibold tabular-nums text-text-primary shrink-0">
+                    {analytics.currentTotal > 0 ? Math.round(item.amount / analytics.currentTotal * 100) : 0}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="bg-white border border-gray-border rounded shadow-card-sm p-5 md:p-6">
+            <h3 className="font-serif-display text-xl text-text-primary mb-1">Daily expenses</h3>
+            <p className="text-xs text-text-secondary mb-4">A daily, non-cumulative view of your spending.</p>
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.dailySpending} margin={{ top: 8, right: 6, left: -12, bottom: 2 }}>
+                  <CartesianGrid vertical={false} stroke="#E8E4DF" />
+                  <XAxis dataKey="date" tickFormatter={(v: string) => v.slice(-2)}
+                    interval={4} tick={{ fontSize: 11, fill: '#9B9590' }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={(v: number) => "₹" + v} tick={{ fontSize: 11, fill: '#9B9590' }}
+                    axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')}
+                    labelFormatter={(label: string) => "Day " + String(label).slice(-2)} />
+                  <Bar dataKey="amount" fill="#2D3B2D" maxBarSize={24} radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
+          <section className="bg-white border border-gray-border rounded shadow-card-sm p-5 md:p-6">
+            <h3 className="font-serif-display text-xl text-text-primary mb-1">Income vs spending</h3>
+            <p className="text-xs text-text-secondary mb-4">Monthly income and credits compared with actual expenses.</p>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.incomeVsExpenses} layout="vertical" margin={{ top: 5, right: 18, left: 25, bottom: 5 }}>
+                  <XAxis type="number" tickFormatter={(v: number) => "₹" + v} tick={{ fontSize: 11, fill: '#9B9590' }} />
+                  <YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 11, fill: '#68625D' }} />
+                  <Tooltip formatter={(value: number) => "₹" + Number(value).toLocaleString('en-IN')} />
+                  <Bar dataKey="amount" fill="#5C6B5C" maxBarSize={32} radius={[0,4,4,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-xs text-text-muted mt-2">{analytics.transactionCount} expense transactions this month.</p>
+          </section>
+          <section className="bg-white border border-gray-border rounded shadow-card-sm p-5 md:p-6">
+            <h3 className="font-serif-display text-xl text-text-primary mb-1">Top merchants</h3>
+            <p className="text-xs text-text-secondary mb-4">Where you have spent the most this month.</p>
+            {analytics.topMerchants.length ? (
+              <div className="space-y-3">
+                {analytics.topMerchants.map((item, i) => (
+                  <div key={item.name} className="flex items-center justify-between gap-3 text-sm border-b border-gray-border/60 pb-2">
+                    <span className="text-text-primary truncate"><span className="text-text-muted mr-2">{i + 1}.</span>{item.name}</span>
+                    <span className="font-semibold tabular-nums shrink-0">₹{item.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-sm text-text-muted">No merchant data yet.</p>}
+          </section>
         </div>
 
         {/* Category Breakdown */}
