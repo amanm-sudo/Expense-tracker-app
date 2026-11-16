@@ -444,9 +444,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchMonthData: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, dashboard: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/months/${monthId}`);
       if (!response.ok) throw new Error('Failed to load month data');
       const data = (await response.json()) as MonthDataResponse;
@@ -531,9 +531,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchAnalytics: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, analytics: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/analytics/${monthId}`);
       if (!response.ok) throw new Error('Failed to load analytics');
       const data = (await response.json()) as AnalyticsData;
@@ -555,9 +555,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchRecurring: async () => {
+    const monthId = labelToMonthId(get().selectedMonth);
     set((state) => ({ loading: { ...state.loading, recurring: true } }));
     try {
-      const monthId = labelToMonthId(get().selectedMonth);
       const response = await fetch(`/api/recurring/${monthId}`);
       if (!response.ok) throw new Error('Failed to load recurring obligations');
       const data = (await response.json()) as RecurringData;
@@ -579,9 +579,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchSummary: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, summary: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/summary/${monthId}`);
       if (!response.ok) throw new Error('Failed to load summary');
       const data = (await response.json()) as SummaryData;
