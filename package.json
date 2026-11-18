@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "test:sms": "vitest run src/lib/sms-parser.test.ts src/lib/import-policy.test.ts src/lib/email-parser.test.ts",
+    "test:finance": "vitest run src/lib/loans.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

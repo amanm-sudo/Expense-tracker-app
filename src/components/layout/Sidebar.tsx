@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutGrid, TrendingUp, Calendar, Settings, BookOpen, Plus, Menu, X, Smartphone } from 'lucide-react';
+import { LayoutGrid, TrendingUp, Calendar, Settings, BookOpen, Plus, Menu, X, Smartphone, HandCoins } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import type { PageView } from '@/types';
 import { useState, useEffect } from 'react';
@@ -11,6 +11,7 @@ const navItems: { label: string; icon: React.ElementType; page: PageView; badgeK
   { label: 'Recurring', icon: Calendar, page: 'recurring' },
   { label: 'Summary', icon: BookOpen, page: 'summary' },
   { label: 'Import', icon: Smartphone, page: 'import-review', badgeKey: 'importPendingCount' },
+  { label: 'Money Lent', icon: HandCoins, page: 'loans' },
   { label: 'Settings', icon: Settings, page: 'settings' },
 ];
 

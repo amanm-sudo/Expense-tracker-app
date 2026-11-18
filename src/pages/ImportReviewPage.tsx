@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 import TopBar from '@/components/layout/TopBar';
 import {
   Smartphone, Check, X, ChevronDown, AlertCircle,
-  CheckSquare, Square, Info,
+  CheckSquare, Square, Info, HandCoins,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { ImportQueueItem } from '@/types';
@@ -68,12 +68,16 @@ export default function ImportReviewPage() {
     fetchImportQueue,
     approveImportItems,
     rejectImportItems,
+    refreshAll,
+    addToast,
     loading,
   } = useStore();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [overrides, setOverrides] = useState<Record<string, { category: string; name: string }>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [lendingItem, setLendingItem] = useState<ImportQueueItem | null>(null);
+  const [borrowerName, setBorrowerName] = useState('');
 
   useEffect(() => {
     fetchImportQueue();
@@ -127,6 +131,29 @@ export default function ImportReviewPage() {
     setSubmitting(false);
   };
 
+
+  const handleLend = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!lendingItem || !borrowerName.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/loans/from-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ importId: lendingItem.id, borrower: borrowerName.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to classify transaction.');
+      setLendingItem(null); setBorrowerName('');
+      addToast('Recorded as Money Lent, not a regular expense.', 'success');
+      await refreshAll();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Unable to move to Money Lent.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isLoading = loading['importQueue'];
 
   return (
@@ -134,6 +161,34 @@ export default function ImportReviewPage() {
       <TopBar pageTitle="Financial Journal" />
 
       <div className="px-4 md:px-8 pb-10 flex-1 flex flex-col">
+        {lendingItem && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Record money lent">
+            <form onSubmit={handleLend} className="w-full max-w-md rounded bg-white shadow-card-md p-6">
+              <h3 className="font-serif-display text-xl text-text-primary mb-2">Mark as Money Lent</h3>
+              <p className="text-sm text-text-secondary mb-4">
+                This debit will be tracked as money owed to you, rather than a permanent expense.
+              </p>
+              <p className="text-sm font-semibold text-text-primary mb-3">
+                ₹{lendingItem.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} · {lendingItem.date}
+              </p>
+              <label className="text-xs font-semibold text-text-muted">
+                Borrower name
+                <input required maxLength={120} value={borrowerName}
+                  onChange={event => setBorrowerName(event.target.value)}
+                  className="w-full mt-1 p-3 rounded border border-gray-border text-text-primary"
+                  placeholder="Who will repay this money?" />
+              </label>
+              <div className="flex justify-end gap-3 mt-5">
+                <button type="button" onClick={() => setLendingItem(null)} disabled={submitting}
+                  className="px-4 py-2 rounded border border-gray-border text-sm">Cancel</button>
+                <button type="submit" disabled={submitting || !borrowerName.trim()}
+                  className="px-4 py-2 rounded bg-sage-dark text-white text-sm font-semibold disabled:opacity-50">
+                  Record as lent
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         {/* Header */}
         <div className="mb-6">
           <div className="text-text-muted text-[11px] font-semibold uppercase tracking-[0.08em] mb-2">
@@ -202,7 +257,7 @@ export default function ImportReviewPage() {
             {/* Table */}
             <div className="bg-white border border-gray-border rounded shadow-card-sm overflow-hidden">
               {/* Table header */}
-              <div className="grid grid-cols-[36px_1fr_120px_180px_100px_80px] gap-3 px-4 py-3
+              <div className="grid grid-cols-[36px_1fr_120px_180px_100px_120px] gap-3 px-4 py-3
                 border-b border-gray-border bg-gray-bg/60 text-[11px] font-semibold uppercase
                 tracking-[0.07em] text-text-muted items-center">
                 <button onClick={toggleSelectAll} className="flex items-center justify-center">
@@ -300,6 +355,16 @@ export default function ImportReviewPage() {
 
                     {/* Quick action buttons */}
                     <div className="flex items-center justify-end gap-1">
+                      {!isCredit && (
+                        <button
+                          onClick={() => { setLendingItem(item); setBorrowerName(item.merchant ?? ''); }}
+                          disabled={submitting}
+                          title="Mark this debit as Money Lent (not an expense)"
+                          className="p-1.5 rounded hover:bg-blue-50 text-text-muted hover:text-blue-700 disabled:opacity-50"
+                        >
+                          <HandCoins size={15} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleApprove([item.id])}
                         disabled={submitting}

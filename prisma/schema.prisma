@@ -24,6 +24,7 @@ model User {
   importMode    String   @default("trusted") // "trusted" | "review"
   importQueue   ImportQueue[]
   merchantRules MerchantRule[]
+  loans         Loan[]
 }
 
 /// Secret token used to authenticate the SMS forwarder webhook.
@@ -126,4 +127,37 @@ model Expense {
 
   @@index([monthId])
   @@index([category])
+}
+
+
+/// Money lent is a receivable (temporary cash outflow), not an expense.
+/// Store integer paise to keep repayments exact.
+model Loan {
+  id             String   @id @default(cuid())
+  userId         String
+  borrower       String
+  principalPaisa Int
+  lentDate       String   // YYYY-MM-DD
+  dueDate        String?
+  note           String?
+  sourceImportId String?  @unique // optional imported SMS/email queue item
+  createdAt      DateTime @default(now())
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repayments LoanRepayment[]
+
+  @@index([userId, lentDate])
+}
+
+model LoanRepayment {
+  id          String   @id @default(cuid())
+  loanId      String
+  amountPaisa Int
+  repaidDate  String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId, repaidDate])
 }

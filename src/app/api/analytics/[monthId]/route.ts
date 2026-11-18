@@ -57,16 +57,17 @@ export async function GET(
         : Promise.resolve([]),
     ]);
 
-    const currentTotal = round2(
-      currentExpenses.reduce((sum, e) => sum + e.amount, 0),
-    );
-    const prevTotal = round2(
-      prevExpenses.reduce((sum, e) => sum + e.amount, 0),
-    );
+    // Credits are cash inflows, not spending.
+    const spending = currentExpenses.filter((e) => e.type !== "credit");
+    const previousSpending = prevExpenses.filter((e) => e.type !== "credit");
+    const currentTotal = round2(spending.reduce((sum, e) => sum + e.amount, 0));
+    const prevTotal = round2(previousSpending.reduce((sum, e) => sum + e.amount, 0));
+    const totalIncome = round2(month.income +
+      currentExpenses.filter((e) => e.type === "credit").reduce((s, e) => s + e.amount, 0));
 
     // ── highestCategory & lowestCategory ────────────────────────────
     const categoryTotals = new Map<string, number>();
-    for (const e of currentExpenses) {
+    for (const e of spending) {
       categoryTotals.set(
         e.category,
         (categoryTotals.get(e.category) ?? 0) + e.amount,
@@ -104,13 +105,13 @@ export async function GET(
 
     // ── spendingTrend (cumulative, sampled every ~5 days) ────────────
     let spendingTrend: TrendDataPoint[] = [];
-    if (currentExpenses.length > 0) {
+    if (spending.length > 0) {
       const lastDay = daysInMonth(monthId);
       const rawDays = [1, 5, 10, 15, 20, 25, lastDay];
       // de-duplicate in case lastDay collides with a sample day
       const trendDays = [...new Set(rawDays)].sort((a, b) => a - b);
       // Pre-extract day-of-month for each expense once.
-      const daySums = currentExpenses.map((e) => ({
+      const daySums = spending.map((e) => ({
         day: parseInt(e.date.slice(8, 10), 10),
         amount: e.amount,
       }));
@@ -139,7 +140,7 @@ export async function GET(
 
     // ── categoryBreakdown (grouped, sorted desc) ────────────────────
     const groupTotals = new Map<string, number>();
-    for (const e of currentExpenses) {
+    for (const e of spending) {
       const label = groupCategoryLabel(e.category);
       groupTotals.set(label, (groupTotals.get(label) ?? 0) + e.amount);
     }
@@ -152,6 +153,28 @@ export async function GET(
       .filter((item) => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
 
+    const dayTotals = new Map<string, number>();
+    const merchantTotals = new Map<string, number>();
+    for (const e of spending) {
+      dayTotals.set(e.date, (dayTotals.get(e.date) ?? 0) + e.amount);
+      const name = (e.name || e.description || "Other").trim() || "Other";
+      merchantTotals.set(name, (merchantTotals.get(name) ?? 0) + e.amount);
+    }
+    const dailySpending: TrendDataPoint[] = Array.from(
+      { length: daysInMonth(monthId) }, (_, day) => {
+        const date = monthId + "-" + String(day + 1).padStart(2, "0");
+        return { date, amount: round2(dayTotals.get(date) ?? 0) };
+      },
+    );
+    const topMerchants = [...merchantTotals.entries()]
+      .map(([name, amount]) => ({ name, amount: round2(amount) }))
+      .sort((a, b) => b.amount - a.amount).slice(0, 5);
+    const incomeVsExpenses = [
+      { name: "Income & credits", amount: totalIncome },
+      { name: "Actual spending", amount: currentTotal },
+    ];
+    const transactionCount = spending.length;
+
     const body: AnalyticsData = {
       monthlyNarrative,
       highestCategory,
@@ -160,6 +183,11 @@ export async function GET(
       currentTotal,
       percentChangeFromLastMonth,
       categoryBreakdown,
+      dailySpending,
+      incomeVsExpenses,
+      topMerchants,
+      totalIncome,
+      transactionCount,
     };
 
     return NextResponse.json(body);

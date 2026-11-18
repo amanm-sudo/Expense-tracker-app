@@ -64,173 +64,48 @@ function currentMonthLabel(): string {
   return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
 }
 
-// ─── Demo Data (used as initial state so UI renders before fetch) ───
-
-const demoRecentExpenses: Expense[] = [
-  {
-    id: '1',
-    name: 'Blue Bottle Coffee',
-    category: 'Food',
-    categoryIcon: 'Coffee',
-    description: 'Morning coffee run',
-    date: '2024-01-12',
-    amount: 6.5,
-    type: 'expense',
-  },
-  {
-    id: '2',
-    name: 'Apartment Rent',
-    category: 'Housing',
-    categoryIcon: 'Home',
-    description: 'Monthly rent payment',
-    date: '2024-01-01',
-    amount: 1800.0,
-    type: 'expense',
-  },
-  {
-    id: '3',
-    name: 'Whole Foods',
-    category: 'Groceries',
-    categoryIcon: 'ShoppingBag',
-    description: 'Weekly groceries',
-    date: '2024-01-10',
-    amount: 142.1,
-    type: 'expense',
-  },
-];
-
-const demoDashboard: DashboardData = {
-  remainingBalance: 4250.0,
-  incomeThisMonth: 8000.0,
-  expensesTracked: 3750.0,
+// ─── Neutral initial state: never show fictional financial data ─────
+const emptyDashboard: DashboardData = {
+  remainingBalance: 0,
+  incomeThisMonth: 0,
+  expensesTracked: 0,
   insightQuote: '"Wealth is the ability to fully experience life."',
-  insightDescription: "You've saved 12% more than last month. Keep the narrative strong.",
-  insightProgressPercent: 60,
-  recentExpenses: demoRecentExpenses,
+  insightDescription: 'Your monthly financial figures will appear once your journal loads.',
+  insightProgressPercent: 0,
+  recentExpenses: [],
+  loansOutstanding: 0,
+  lentThisMonth: 0,
+  repaidThisMonth: 0,
 };
 
-const demoAnalytics: AnalyticsData = {
-  monthlyNarrative:
-    'This month, your financial story reflects a shift towards essential stability, with a notable emphasis on long-term home investments.',
-  highestCategory: { name: 'Housing', percentage: 42 },
-  lowestCategory: { name: 'Health', percentage: 2.4 },
-  spendingTrend: [
-    { date: '2024-01-01', amount: 1800 },
-    { date: '2024-01-05', amount: 2100 },
-    { date: '2024-01-10', amount: 2250 },
-    { date: '2024-01-15', amount: 3100 },
-    { date: '2024-01-20', amount: 3450 },
-    { date: '2024-01-25', amount: 4100 },
-    { date: '2024-01-31', amount: 4822.4 },
-  ],
-  currentTotal: 4822.4,
-  percentChangeFromLastMonth: 8,
-  categoryBreakdown: [
-    { name: 'Housing & Living', amount: 2025, color: '#2D3B2D' },
-    { name: 'Dining & Leisure', amount: 850, color: '#A0522D' },
-    { name: 'Transportation', amount: 420, color: '#5C6B5C' },
-    { name: 'Retail & Shopping', amount: 380, color: '#3D3D3D' },
-    { name: 'Utilities', amount: 210, color: '#9B9590' },
-  ],
+const emptyAnalytics: AnalyticsData = {
+  dailySpending: [],
+  incomeVsExpenses: [],
+  topMerchants: [],
+  totalIncome: 0,
+  transactionCount: 0,
+  monthlyNarrative: '',
+  highestCategory: { name: 'None', percentage: 0 },
+  lowestCategory: { name: 'None', percentage: 0 },
+  spendingTrend: [],
+  currentTotal: 0,
+  percentChangeFromLastMonth: 0,
+  categoryBreakdown: [],
 };
 
-const demoRecurring: RecurringData = {
-  monthlyTotal: 140.99,
-  obligations: [
-    {
-      id: 'r1',
-      name: 'Gym Membership',
-      category: 'Health & Wellness',
-      icon: 'Dumbbell',
-      dueDay: 5,
-      amount: 50.0,
-      status: 'paid',
-      urgency: 'scheduled',
-      timeGroup: 'early',
-    },
-    {
-      id: 'r2',
-      name: 'Netflix',
-      category: 'Entertainment',
-      icon: 'Monitor',
-      dueDay: 12,
-      amount: 15.99,
-      status: 'paid',
-      urgency: 'scheduled',
-      timeGroup: 'mid',
-    },
-    {
-      id: 'r3',
-      name: 'Internet',
-      category: 'Utilities',
-      icon: 'Globe',
-      dueDay: 20,
-      amount: 75.0,
-      status: 'pending',
-      urgency: 'due-soon',
-      timeGroup: 'late',
-    },
-  ],
-  upcomingDraft: {
-    paymentName: 'Internet',
-    dueDay: 20,
-    accountEnding: '4492',
-  },
-  quarterlyOutlook: {
-    projectedTrend: '4% lower than Q4 2023',
-    efficiencyScore: 75,
-  },
+const emptyRecurring: RecurringData = {
+  monthlyTotal: 0,
+  obligations: [],
+  upcomingDraft: { paymentName: '', dueDay: 1, accountEnding: '' },
+  quarterlyOutlook: { projectedTrend: '', efficiencyScore: 0 },
 };
 
-const demoSummary: SummaryData = {
-  month: 'January 2024',
-  totalMonthlySpend: 4285.0,
-  totalAmountSaved: 1850.42,
-  topCategories: [
-    {
-      name: 'Shelter & Living',
-      description: 'The foundation of your monthly narrative.',
-      amount: 1200,
-      percentage: 60,
-      cardType: 'light',
-      subLabel: 'Rent/Mortgage',
-    },
-    {
-      name: 'Dining Out',
-      description: '',
-      amount: 642,
-      percentage: 0,
-      cardType: 'dark',
-      icon: 'UtensilsCrossed',
-      trend: '+12% from last month',
-    },
-    {
-      name: 'Transit',
-      description: '',
-      amount: 310,
-      percentage: 0,
-      cardType: 'light',
-      icon: 'Bus',
-    },
-    {
-      name: 'Other Essentials',
-      description:
-        'Subscriptions, utilities, and minor groceries made up the remainder of your story this month.',
-      amount: 0,
-      percentage: 18,
-      cardType: 'gray',
-    },
-  ],
-  aiPersonalNote: {
-    greeting: 'Dear Friend,',
-    bodyParagraphs: [
-      "As I reviewed your journal for January, I couldn't help but notice how beautifully you've balanced your priorities. You managed to keep your leisure spending remarkably disciplined—nearly 15% lower than your seasonal average.",
-      'While the increase in dining out suggests a month filled with social connection, your consistent contribution to your savings narrative remains the highlight. You are writing a story of true stability.',
-      'Keep focused on the upcoming quarter; the small seeds you planted this month in your recurring accounts will likely bloom into significant security by spring.',
-    ],
-    closing: 'With care,',
-    signature: 'Your Wealth Journal',
-  },
+const emptySummary: SummaryData = {
+  month: '',
+  totalMonthlySpend: 0,
+  totalAmountSaved: 0,
+  topCategories: [],
+  aiPersonalNote: { greeting: '', bodyParagraphs: [], closing: '', signature: '' },
 };
 
 // ─── Store Interface ────────────────────────────────────────────────
@@ -275,6 +150,11 @@ interface AppState {
 
   // Summary data
   summary: SummaryData;
+
+  // Track which month has actually been fetched for each financial page.
+  // Prevents briefly displaying another month's values on navigation.
+  loadedMonths: Record<string, string>;
+  dataErrors: Record<string, string | undefined>;
 
   // Loading states
   loading: Record<string, boolean>;
@@ -343,7 +223,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Date — default to current month label
   selectedMonth: currentMonthLabel(),
-  setSelectedMonth: (month) => set({ selectedMonth: month }),
+  setSelectedMonth: (month) => set({ selectedMonth: month, dataErrors: {} }),
   getSelectedMonthId: () => labelToMonthId(get().selectedMonth),
 
   // Modal
@@ -356,11 +236,13 @@ export const useStore = create<AppState>((set, get) => ({
   openEditExpense: (expense) => set({ editingExpense: expense }),
   closeEditExpense: () => set({ editingExpense: null }),
 
-  // Data — demo defaults so UI renders immediately
-  dashboard: demoDashboard,
-  analytics: demoAnalytics,
-  recurring: demoRecurring,
-  summary: demoSummary,
+  // Never display sample balances or fabricated transactions to a signed-in user.
+  dashboard: emptyDashboard,
+  analytics: emptyAnalytics,
+  recurring: emptyRecurring,
+  summary: emptySummary,
+  loadedMonths: {},
+  dataErrors: {},
 
   // Actions
   addExpense: (expense) =>
@@ -398,6 +280,7 @@ export const useStore = create<AppState>((set, get) => ({
               ? state.dashboard.remainingBalance - amount
               : state.dashboard.remainingBalance + amount,
           },
+          loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
         };
       });
       get().addToast('Entry removed', 'success');
@@ -473,6 +356,7 @@ export const useStore = create<AppState>((set, get) => ({
             : state.dashboard.remainingBalance - newExpense.amount,
           recentExpenses: [newExpense, ...state.dashboard.recentExpenses].slice(0, 10),
         },
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
       }));
 
       get().addToast(
@@ -547,6 +431,7 @@ export const useStore = create<AppState>((set, get) => ({
             ),
           },
           editingExpense: null,
+          loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
         };
       });
 
@@ -559,9 +444,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchMonthData: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, dashboard: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/months/${monthId}`);
       if (!response.ok) throw new Error('Failed to load month data');
       const data = (await response.json()) as MonthDataResponse;
@@ -580,11 +465,13 @@ export const useStore = create<AppState>((set, get) => ({
         .slice(0, 10);
 
       // Progress percent: ratio of remaining balance to income (clamped 0-100)
-      const remainingBalance = income + totalCredits - totalExpenses;
+      const remainingBalance = income + totalCredits - totalExpenses - data.loanCashflow.lent + data.loanCashflow.repaid;
       const progressPercent = income > 0
         ? Math.max(0, Math.min(100, Math.round((remainingBalance / income) * 100)))
         : 0;
 
+      // Ignore a slow response if the user has already selected another month.
+      if (get().getSelectedMonthId() !== monthId) return;
       set((state) => ({
         dashboard: {
           ...state.dashboard,
@@ -592,14 +479,27 @@ export const useStore = create<AppState>((set, get) => ({
           incomeThisMonth: income,
           expensesTracked: totalExpenses,
           recentExpenses: recent,
-          insightProgressPercent: progressPercent || state.dashboard.insightProgressPercent,
+          loansOutstanding: data.loanCashflow.outstanding,
+          lentThisMonth: data.loanCashflow.lent,
+          repaidThisMonth: data.loanCashflow.repaid,
+          insightProgressPercent: progressPercent,
+          insightDescription: income === 0
+            ? 'Add your monthly income to put spending and lending in context.'
+            : remainingBalance < 0
+              ? 'Your recorded outflows exceed inflows for this month.'
+              : 'Remaining cash reflects expenses, money lent and repayments received.',
         },
+        loadedMonths: { ...state.loadedMonths, dashboard: monthId },
+        dataErrors: { ...state.dataErrors, dashboard: undefined },
         loading: { ...state.loading, dashboard: false },
       }));
     } catch (err) {
-      // Background fetch failure — keep existing (demo) state, don't toast noise.
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchMonthData] failed:', err);
-      set((state) => ({ loading: { ...state.loading, dashboard: false } }));
+      set((state) => ({
+        dataErrors: { ...state.dataErrors, dashboard: 'Unable to load monthly data.' },
+        loading: { ...state.loading, dashboard: false },
+      }));
     }
   },
 
@@ -631,68 +531,101 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onFetchAnalytics: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, analytics: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/analytics/${monthId}`);
       if (!response.ok) throw new Error('Failed to load analytics');
       const data = (await response.json()) as AnalyticsData;
+      if (get().getSelectedMonthId() !== monthId) return;
       set((state) => ({
         analytics: data,
+        loadedMonths: { ...state.loadedMonths, analytics: monthId },
+        dataErrors: { ...state.dataErrors, analytics: undefined },
         loading: { ...state.loading, analytics: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchAnalytics] failed:', err);
-      set((state) => ({ loading: { ...state.loading, analytics: false } }));
+      set((state) => ({
+        dataErrors: { ...state.dataErrors, analytics: 'Unable to load analytics.' },
+        loading: { ...state.loading, analytics: false },
+      }));
     }
   },
 
   onFetchRecurring: async () => {
+    const monthId = labelToMonthId(get().selectedMonth);
     set((state) => ({ loading: { ...state.loading, recurring: true } }));
     try {
-      const monthId = labelToMonthId(get().selectedMonth);
       const response = await fetch(`/api/recurring/${monthId}`);
       if (!response.ok) throw new Error('Failed to load recurring obligations');
       const data = (await response.json()) as RecurringData;
+      if (get().getSelectedMonthId() !== monthId) return;
       set((state) => ({
         recurring: data,
+        loadedMonths: { ...state.loadedMonths, recurring: monthId },
+        dataErrors: { ...state.dataErrors, recurring: undefined },
         loading: { ...state.loading, recurring: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchRecurring] failed:', err);
-      set((state) => ({ loading: { ...state.loading, recurring: false } }));
+      set((state) => ({
+        dataErrors: { ...state.dataErrors, recurring: 'Unable to load recurring obligations.' },
+        loading: { ...state.loading, recurring: false },
+      }));
     }
   },
 
   onFetchSummary: async (month, _year) => {
+    const monthId = deriveMonthId(month, _year);
     set((state) => ({ loading: { ...state.loading, summary: true } }));
     try {
-      const monthId = deriveMonthId(month, _year);
       const response = await fetch(`/api/summary/${monthId}`);
       if (!response.ok) throw new Error('Failed to load summary');
       const data = (await response.json()) as SummaryData;
+      if (get().getSelectedMonthId() !== monthId) return;
       set((state) => ({
         summary: data,
+        loadedMonths: { ...state.loadedMonths, summary: monthId },
+        dataErrors: { ...state.dataErrors, summary: undefined },
         loading: { ...state.loading, summary: false },
       }));
     } catch (err) {
+      if (get().getSelectedMonthId() !== monthId) return;
       console.error('[onFetchSummary] failed:', err);
-      set((state) => ({ loading: { ...state.loading, summary: false } }));
+      set((state) => ({
+        dataErrors: { ...state.dataErrors, summary: 'Unable to load monthly summary.' },
+        loading: { ...state.loading, summary: false },
+      }));
     }
   },
 
   refreshAll: async () => {
-    const { selectedMonth, onFetchMonthData, onFetchAnalytics, onFetchRecurring, onFetchSummary } = get();
-    // Derive year from label for the (month, year) signature
-    const match = selectedMonth.match(/^(\w+)\s+(\d{4})$/);
-    const year = match ? parseInt(match[2], 10) : new Date().getFullYear();
-    await Promise.all([
+    const { selectedMonth, currentPage, onFetchMonthData, onFetchAnalytics,
+      onFetchRecurring, onFetchSummary, fetchImportQueue } = get();
+    const year = Number(selectedMonth.match(/\d{4}$/)?.[0]) || new Date().getFullYear();
+
+    // Invalidate other tabs, so they refresh the next time they are opened.
+    // Only fetch the visible view plus the dashboard; avoid five competing
+    // serverless API calls and repeated Neon lookups on every update.
+    set((state) => ({
+      loadedMonths: {
+        ...state.loadedMonths,
+        analytics: currentPage === 'analytics' ? state.loadedMonths.analytics : '',
+        summary: currentPage === 'summary' ? state.loadedMonths.summary : '',
+        recurring: currentPage === 'recurring' ? state.loadedMonths.recurring : '',
+      },
+    }));
+    const jobs: Promise<void>[] = [
       onFetchMonthData(selectedMonth, year),
-      onFetchAnalytics(selectedMonth, year),
-      onFetchRecurring(),
-      onFetchSummary(selectedMonth, year),
-      get().fetchImportQueue(),
-    ]);
+      fetchImportQueue(),
+    ];
+    if (currentPage === 'analytics') jobs.push(onFetchAnalytics(selectedMonth, year));
+    if (currentPage === 'summary') jobs.push(onFetchSummary(selectedMonth, year));
+    if (currentPage === 'recurring') jobs.push(onFetchRecurring());
+    await Promise.all(jobs);
   },
 
   setIncome: async (income) => {
@@ -708,8 +641,9 @@ export const useStore = create<AppState>((set, get) => ({
         dashboard: {
           ...state.dashboard,
           incomeThisMonth: income,
-          remainingBalance: income - state.dashboard.expensesTracked,
+          remainingBalance: state.dashboard.remainingBalance + income - state.dashboard.incomeThisMonth,
         },
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
       }));
       get().addToast('Income updated', 'success');
     } catch {
@@ -777,6 +711,9 @@ export const useStore = create<AppState>((set, get) => ({
       const { selectedMonth, onFetchMonthData } = get();
       const match = selectedMonth.match(/^(\w+)\s+(\d{4})$/);
       const year = match ? parseInt(match[2], 10) : new Date().getFullYear();
+      set((state) => ({
+        loadedMonths: { ...state.loadedMonths, analytics: '', summary: '' },
+      }));
       await onFetchMonthData(selectedMonth, year);
     } catch {
       get().addToast('Failed to approve transactions', 'error');

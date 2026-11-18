@@ -97,6 +97,29 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Money lent changes monthly available cash but is not counted as spending. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          <div className="bg-white border border-gray-border rounded p-5">
+            <div className="text-xs text-text-muted mb-2">Money lent this month</div>
+            <div className="font-serif-display text-xl text-text-primary">
+              ₹{dashboard.lentThisMonth.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div className="bg-white border border-gray-border rounded p-5">
+            <div className="text-xs text-text-muted mb-2">Repayments received</div>
+            <div className="font-serif-display text-xl text-emerald-700">
+              ₹{dashboard.repaidThisMonth.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <button onClick={() => setCurrentPage('loans')}
+            className="bg-white border border-gray-border rounded p-5 text-left hover:border-sage-dark transition-colors">
+            <div className="text-xs text-text-muted mb-2">Still owed to you · View loans</div>
+            <div className="font-serif-display text-xl text-text-primary">
+              ₹{dashboard.loansOutstanding.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+          </button>
+        </div>
+
         {/* Recent Entries */}
         <div className="mb-10 animate-slide-up">
           <div className="flex items-end justify-between mb-4">
